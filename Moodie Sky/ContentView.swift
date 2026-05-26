@@ -424,6 +424,7 @@
       @State var showRecoveryKeyConfirmation = false
       @State var recoveryKeyConfirmationInput = ""
       @State var backupFormatSelectionInProgress = false
+      @State var didRunInitialAppear = false
 
       var body: some View {
         TabView(selection: $selection) {
@@ -448,9 +449,13 @@
         .animation(.easeInOut(duration: 0.22), value: selection)
         .onChange(of: selection) { _, _ in vm.triggerHaptic(.medium) }
         .onAppear {
+          guard !didRunInitialAppear else { return }
+          didRunInitialAppear = true
           vm.configure(modelContext: modelContext)
           selection = vm.preferredStartTab.rawValue
-          vm.syncWithICloud()
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            vm.syncWithICloud()
+          }
           DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeOut(duration: 0.28)) { showLaunchSplash = false }
           }

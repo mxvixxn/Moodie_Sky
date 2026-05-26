@@ -501,7 +501,15 @@ final class MoodViewModel: ObservableObject {
     migrateLegacyEntriesIfNeeded()
     loadEntries()
     loadPendingDeleteIDs()
-    if isReminderEnabled { scheduleDailyReminder() }
+    scheduleDailyReminderAfterStartupIfNeeded()
+  }
+
+  private func scheduleDailyReminderAfterStartupIfNeeded() {
+    guard isReminderEnabled else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+      guard let self, self.isReminderEnabled else { return }
+      self.scheduleDailyReminder()
+    }
   }
 
   // MARK: - 기록 저장 / 삭제 / 수정
