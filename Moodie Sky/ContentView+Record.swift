@@ -19,7 +19,7 @@ extension ContentView {
       .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
-    // MARK: - 3. 기록 탭
+    // MARK: - 기록 탭
 
     var recordView: some View {
       List {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension ContentView {
-    // MARK: - 4. 다이어리 탭
+    // MARK: - 다이어리 탭
     var calendarView: some View {
       List {
         Section { calendarContent.listRowBackground(Color.clear).listRowInsets(EdgeInsets()) }
@@ -162,7 +162,6 @@ extension ContentView {
 
     var calendarContent: some View {
       VStack(spacing: 15) {
-        // 월 이동 헤더
         HStack {
           Button(action: {
             vm.changeMonth(-1)
@@ -197,7 +196,6 @@ extension ContentView {
         .padding(.horizontal).padding(.vertical, 4)
         .moodieInsetSurface(cornerRadius: vm.controlCornerRadius, tint: vm.moodieTint)
 
-        // 요일 헤더
         HStack {
           ForEach(vm.daysOfWeek, id: \.self) { day in
             Text(day)
@@ -207,7 +205,6 @@ extension ContentView {
           }
         }.padding(.horizontal, 5)
 
-        // 날짜 그리드
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8)
         {
           ForEach(vm.calendarDays(for: vm.displayedMonth), id: \.id) { day in

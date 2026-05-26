@@ -168,7 +168,7 @@
       case data
     }
 
-    // MARK: - 1. 데이터 모델
+    // MARK: - 데이터 모델
     @Model
     final class MoodEntry: Identifiable, Codable {
       @Attribute(.unique) var id: UUID
@@ -267,7 +267,7 @@
       let date: Date?
     }
 
-    // MARK: - CloudSyncManager (기존과 동일)
+    // MARK: - CloudSyncManager
     final class CloudSyncManager {
       static let shared = CloudSyncManager()
       private let database = CKContainer(identifier: "iCloud.com.mxvixxn.Moodie-Sky")
@@ -377,10 +377,8 @@
       }
     }
 
-    // MARK: - 2. ContentView (뷰 전담)
+    // MARK: - ContentView
     struct ContentView: View {
-      // ViewModel을 @StateObject로 소유합니다.
-      // 로직은 모두 vm을 통해 처리하고, 이 파일은 뷰 레이아웃만 담당합니다.
       @Environment(\.modelContext) var modelContext
       @Environment(\.scenePhase) var scenePhase
       @StateObject var vm = MoodViewModel()

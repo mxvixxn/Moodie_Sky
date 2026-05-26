@@ -7,10 +7,6 @@ import SwiftData
 import SwiftUI
 @preconcurrency import UserNotifications
 
-// MARK: - MoodViewModel
-// ContentView에서 모든 로직을 분리한 ViewModel입니다.
-// @MainActor: UI 업데이트가 항상 메인 스레드에서 일어나도록 보장합니다.
-
 struct MoodReport {
   let title: String
   let emoji: String
@@ -228,7 +224,7 @@ final class MoodViewModel: ObservableObject {
   @Published var saveConfirmationText = "오늘의 마음 하늘에 저장했어요"
   @Published var lastSavedEntryID: UUID?
 
-  // MARK: - 캐시된 DateFormatter (성능 최적화)
+  // MARK: - DateFormatter
   private static let timeFormatter: DateFormatter = {
     let f = DateFormatter()
     f.locale = Locale(identifier: "ko_KR")
@@ -422,7 +418,7 @@ final class MoodViewModel: ObservableObject {
     return "최근 백업: \(formattedFullDate(lastBackupExportedAt))"
   }
 
-  // MARK: - 조사 처리 (개선)
+  // MARK: - 조사 처리
   private func weatherStartPhrase(for weather: String) -> String {
     switch weather {
     case "맑음": return "맑음으로"
@@ -2189,8 +2185,6 @@ final class MoodViewModel: ObservableObject {
   }
 
   // MARK: - iCloud 동기화
-  // 현재는 폰 설치용 버전이라 비활성화 상태입니다.
-  // 나중에 실제 동기화를 켤 때는 아래 #if 블록 안의 코드를 활성화하세요.
   func syncWithICloud() {
     #if ENABLE_ICLOUD_SYNC
       Task {
