@@ -101,32 +101,23 @@ extension ContentView {
               Text(weather.0).font(.caption2)
             }
             .frame(maxWidth: .infinity).padding(.vertical, 12)
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .moodieInsetSurface(cornerRadius: 14, tint: vm.accentColor(for: weather.0))
           }
         }
         Text("오늘은 구름이 많았지만 괜찮았어요")
           .font(.subheadline).padding().frame(maxWidth: .infinity, alignment: .leading)
-          .background(.thinMaterial)
-          .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+          .moodieInsetSurface(cornerRadius: 14, tint: vm.moodieTint)
       }
       .padding().frame(width: 310)
-      .background(.regularMaterial)
-      .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(
-          Color.primary.opacity(0.05), lineWidth: 1))
+      .moodieCard(cornerRadius: 28)
     }
 
     var limitPreview: some View {
       HStack(spacing: 12) {
         ForEach(0..<3, id: \.self) { index in
           Text(["☀️", "☁️", "🌧️"][index]).font(.system(size: 34))
-            .frame(width: 70, height: 70).background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-              RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(
-                Color.primary.opacity(0.05), lineWidth: 1))
+            .frame(width: 70, height: 70)
+            .moodieInsetSurface(cornerRadius: 22, tint: vm.moodieTint, isActive: index == 1)
         }
       }
     }
@@ -139,18 +130,11 @@ extension ContentView {
             Text(day == 7 ? "☁️" : day == 12 ? "🌈" : "").font(.caption)
           }
           .frame(width: 42, height: 52)
-          .background(day == 12 ? vm.moodieTint.opacity(0.16) : Color.primary.opacity(0.04))
-          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(
-              day == 12 ? vm.moodieTint.opacity(0.45) : Color.clear, lineWidth: 1))
+          .moodieInsetSurface(cornerRadius: 12, tint: vm.moodieTint, isActive: day == 12)
         }
       }
-      .padding().background(.regularMaterial)
-      .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(
-          Color.primary.opacity(0.05), lineWidth: 1))
+      .padding()
+      .moodieCard(cornerRadius: 24)
     }
 
     var swipeTutorialPreview: some View {
@@ -163,8 +147,9 @@ extension ContentView {
           Text("오후엔 조금 흐렸어요").font(.subheadline)
           Spacer()
         }
-        .padding().frame(width: 190).background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding()
+        .frame(width: 190)
+        .moodieInsetSurface(cornerRadius: 16, tint: vm.moodieTint, isActive: true)
         Label("삭제", systemImage: "trash").font(.caption).fontWeight(.bold).foregroundStyle(.white)
           .padding(.horizontal, 14).padding(.vertical, 12).background(.red)
           .clipShape(RoundedRectangle(cornerRadius: 12))

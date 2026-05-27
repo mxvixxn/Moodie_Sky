@@ -5,41 +5,44 @@ extension ContentView {
     // MARK: - 설정 탭
     var settingsView: some View {
       NavigationStack {
-        ScrollView {
-          VStack(alignment: .leading, spacing: 18) {
-            Text("설정")
-              .font(.system(.largeTitle, design: .rounded, weight: .bold))
-              .padding(.top, 6)
+        ZStack {
+          MoodieBackground(colors: vm.backgroundColors())
+          ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+              Text("설정")
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .padding(.top, 6)
 
-            VStack(spacing: 10) {
-              settingsCategoryRow(
-                route: .general,
-                icon: "slider.horizontal.3",
-                title: "일반",
-                subtitle: "앱 상태와 기본 정보를 확인해요"
-              )
-              settingsCategoryRow(
-                route: .notifications,
-                icon: "bell",
-                title: "알림",
-                subtitle: vm.isReminderEnabled ? "매일 알림 켜짐" : "매일 알림 꺼짐"
-              )
-              settingsCategoryRow(
-                route: .security,
-                icon: "lock",
-                title: "보안",
-                subtitle: vm.hasPasscode ? "앱 암호 켜짐" : "앱 암호 꺼짐"
-              )
-              settingsCategoryRow(
-                route: .data,
-                icon: "externaldrive",
-                title: "데이터 관리",
-                subtitle: "백업 내보내기와 초기화를 관리해요"
-              )
+              VStack(spacing: 10) {
+                settingsCategoryRow(
+                  route: .general,
+                  icon: "slider.horizontal.3",
+                  title: "일반",
+                  subtitle: "앱 상태와 기본 정보를 확인해요"
+                )
+                settingsCategoryRow(
+                  route: .notifications,
+                  icon: "bell",
+                  title: "알림",
+                  subtitle: vm.isReminderEnabled ? "매일 알림 켜짐" : "매일 알림 꺼짐"
+                )
+                settingsCategoryRow(
+                  route: .security,
+                  icon: "lock",
+                  title: "보안",
+                  subtitle: vm.hasPasscode ? "앱 암호 켜짐" : "앱 암호 꺼짐"
+                )
+                settingsCategoryRow(
+                  route: .data,
+                  icon: "externaldrive",
+                  title: "데이터 관리",
+                  subtitle: "백업 내보내기와 초기화를 관리해요"
+                )
+              }
             }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
           }
-          .padding(.horizontal)
-          .padding(.bottom, 24)
         }
         .navigationDestination(for: SettingsRoute.self) { route in
           settingsDetailView(for: route)
@@ -700,8 +703,11 @@ extension ContentView {
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: newPasscode.count == passcodeSetupDigitCount
+              )
               .onChange(of: newPasscode) { _, value in
                 newPasscode = vm.limitedDigits(value, count: passcodeSetupDigitCount)
               }
@@ -710,8 +716,11 @@ extension ContentView {
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: confirmPasscode.count == passcodeSetupDigitCount
+              )
               .onChange(of: confirmPasscode) { _, value in
                 confirmPasscode = vm.limitedDigits(value, count: passcodeSetupDigitCount)
               }
@@ -1000,8 +1009,11 @@ extension ContentView {
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: backupAuthPasscode.count == vm.passcodeDigitCount
+              )
               .onChange(of: backupAuthPasscode) { _, value in
                 backupAuthPasscode = vm.limitedDigits(value, count: vm.passcodeDigitCount)
               }
@@ -1026,8 +1038,7 @@ extension ContentView {
                   .fontWeight(.semibold)
                   .frame(maxWidth: .infinity)
                   .padding()
-                  .background(Color.primary.opacity(0.04))
-                  .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+                  .moodieInsetSurface(cornerRadius: vm.controlCornerRadius, tint: vm.moodieTint)
               }
               .buttonStyle(.plain)
               .disabled(vm.isPasscodeTemporarilyLocked)
@@ -1098,13 +1109,20 @@ extension ContentView {
             SecureField("백업 암호", text: $backupEncryptionPassword)
               .textContentType(.newPassword)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: backupEncryptionPassword.count >= 8
+              )
             SecureField("백업 암호 확인", text: $backupEncryptionConfirmation)
               .textContentType(.newPassword)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: !backupEncryptionConfirmation.isEmpty
+                  && backupEncryptionConfirmation == backupEncryptionPassword
+              )
             if !vm.authErrorMessage.isEmpty {
               Text(vm.authErrorMessage).font(.caption).foregroundStyle(.red)
             }
@@ -1159,8 +1177,11 @@ extension ContentView {
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: backupImportAuthPasscode.count == vm.passcodeDigitCount
+              )
               .onChange(of: backupImportAuthPasscode) { _, value in
                 backupImportAuthPasscode = vm.limitedDigits(value, count: vm.passcodeDigitCount)
               }
@@ -1177,8 +1198,7 @@ extension ContentView {
                   .fontWeight(.semibold)
                   .frame(maxWidth: .infinity)
                   .padding()
-                  .background(Color.primary.opacity(0.04))
-                  .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+                  .moodieInsetSurface(cornerRadius: vm.controlCornerRadius, tint: vm.moodieTint)
               }
               .buttonStyle(.plain)
               .disabled(vm.isPasscodeTemporarilyLocked)
@@ -1236,8 +1256,11 @@ extension ContentView {
             SecureField("백업 암호", text: $encryptedBackupImportPassword)
               .textContentType(.password)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: !encryptedBackupImportPassword.isEmpty
+              )
             if !vm.authErrorMessage.isEmpty {
               Text(vm.authErrorMessage).font(.caption).foregroundStyle(.red)
             }
@@ -1325,8 +1348,11 @@ extension ContentView {
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: .red,
+                isActive: deleteAuthPasscode.count == vm.passcodeDigitCount
+              )
               .onChange(of: deleteAuthPasscode) { _, value in
                 deleteAuthPasscode = vm.limitedDigits(value, count: vm.passcodeDigitCount)
               }

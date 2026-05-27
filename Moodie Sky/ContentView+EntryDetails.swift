@@ -14,12 +14,8 @@ extension ContentView {
                 Text(vm.formattedFullDate(entry.date)).font(.subheadline).foregroundStyle(.secondary)
                 Text(entry.note).font(.body).padding(.top, 8)
               }
-              .frame(maxWidth: .infinity, alignment: .leading).padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous))
-              .overlay(
-                RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous).stroke(
-                  Color.primary.opacity(0.05), lineWidth: 1))
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .moodieCard(cornerRadius: vm.cardCornerRadius)
 
               dayTimelineView(for: entry)
             }.padding()
@@ -51,23 +47,23 @@ extension ContentView {
                 } label: {
                   Text(weather.1).font(.system(size: 30))
                     .frame(maxWidth: .infinity).padding(.vertical, 14)
-                    .background(.regularMaterial)
-                    .clipShape(
-                      RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous)
+                    .moodieInsetSurface(
+                      cornerRadius: vm.controlCornerRadius,
+                      tint: vm.accentColor(for: weather.0),
+                      isActive: vm.editWeather == weather.0
                     )
-                    .overlay(
-                      RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous)
-                        .stroke(
-                          vm.editWeather == weather.0
-                            ? vm.moodieTint.opacity(0.55) : Color.primary.opacity(0.05),
-                          lineWidth: 1.5))
                 }.buttonStyle(.plain)
               }
             }
 
             TextField("마음을 다시 적어보세요", text: $vm.editNote, axis: .vertical)
-              .lineLimit(2...6).padding().background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous))
+              .lineLimit(2...6)
+              .padding()
+              .moodieInsetSurface(
+                cornerRadius: vm.cardCornerRadius,
+                tint: vm.accentColor(for: vm.editWeather),
+                isActive: !vm.editNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              )
             Spacer()
           }.padding()
         }

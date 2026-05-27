@@ -73,15 +73,17 @@ extension ContentView {
               .textInputAutocapitalization(.characters)
               .autocorrectionDisabled()
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(cornerRadius: vm.controlCornerRadius, tint: vm.moodieTint)
 
             SecureField("새 암호", text: $recoveryNewPasscode)
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: recoveryNewPasscode.count == vm.passcodeDigitCount
+              )
               .onChange(of: recoveryNewPasscode) { _, value in
                 recoveryNewPasscode = vm.limitedDigits(value, count: vm.passcodeDigitCount)
               }
@@ -90,8 +92,11 @@ extension ContentView {
               .keyboardType(.numberPad)
               .textContentType(.oneTimeCode)
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: recoveryConfirmPasscode.count == vm.passcodeDigitCount
+              )
               .onChange(of: recoveryConfirmPasscode) { _, value in
                 recoveryConfirmPasscode = vm.limitedDigits(value, count: vm.passcodeDigitCount)
               }
@@ -171,8 +176,11 @@ extension ContentView {
               .textInputAutocapitalization(.characters)
               .autocorrectionDisabled()
               .padding()
-              .background(.regularMaterial)
-              .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: vm.moodieTint,
+                isActive: !recoveryKeyConfirmationInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              )
 
             if !vm.authErrorMessage.isEmpty {
               Text(vm.authErrorMessage)
@@ -312,8 +320,11 @@ extension ContentView {
         Text(vm.todaySummaryEmoji)
           .font(.system(size: 34))
           .frame(width: 58, height: 58)
-          .background(vm.accentColor(for: vm.selectedWeather).opacity(0.12))
-          .clipShape(Circle())
+          .moodieInsetSurface(
+            cornerRadius: 29,
+            tint: vm.accentColor(for: vm.selectedWeather),
+            isActive: true
+          )
 
         VStack(alignment: .leading, spacing: 5) {
           Text(vm.todaySummaryTitle)
@@ -327,11 +338,10 @@ extension ContentView {
         Spacer(minLength: 8)
       }
       .padding(15)
-      .background(.regularMaterial)
-      .clipShape(RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous)
-          .stroke(vm.accentColor(for: vm.selectedWeather).opacity(0.14), lineWidth: 1)
+      .moodieInsetSurface(
+        cornerRadius: vm.cardCornerRadius,
+        tint: vm.accentColor(for: vm.selectedWeather),
+        isActive: true
       )
     }
 
@@ -351,14 +361,10 @@ extension ContentView {
                 .foregroundStyle(isSelected ? .primary : .secondary)
             }
             .frame(maxWidth: .infinity).padding(.vertical, isSelected ? 12 : 10)
-            .background(.regularMaterial)
-            .background(isSelected ? vm.accentColor(for: w.0).opacity(0.10) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-            .overlay(
-              RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .stroke(
-                  isSelected ? vm.accentColor(for: w.0).opacity(0.42) : Color.primary.opacity(0.05),
-                  lineWidth: isSelected ? 1.4 : 1)
+            .moodieInsetSurface(
+              cornerRadius: 13,
+              tint: vm.accentColor(for: w.0),
+              isActive: isSelected
             )
             .scaleEffect(isSelected ? 1.015 : 1)
             .shadow(
@@ -405,7 +411,11 @@ extension ContentView {
     func entryRow(_ entry: MoodEntry, isHighlighted: Bool = false, showsDate: Bool = false) -> some View {
       HStack(spacing: 12) {
         Text(entry.emoji).font(.title2).frame(width: 44, height: 44)
-          .background(Color.primary.opacity(0.05)).clipShape(Circle())
+          .moodieInsetSurface(
+            cornerRadius: 22,
+            tint: vm.accentColor(for: entry.weather),
+            isActive: isHighlighted
+          )
         VStack(alignment: .leading, spacing: 5) {
           Text(showsDate ? vm.formattedFullDate(entry.date) : vm.timeText(entry.date))
             .font(.caption)
@@ -415,14 +425,11 @@ extension ContentView {
         }
         Spacer()
       }
-      .padding(14).background(.regularMaterial)
-      .background(isHighlighted ? vm.accentColor(for: entry.weather).opacity(0.14) : Color.clear)
-      .clipShape(RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: vm.cardCornerRadius, style: .continuous).stroke(
-          isHighlighted
-            ? vm.accentColor(for: entry.weather).opacity(0.36) : Color.primary.opacity(0.05),
-          lineWidth: isHighlighted ? 1.5 : 1)
+      .padding(14)
+      .moodieInsetSurface(
+        cornerRadius: vm.cardCornerRadius,
+        tint: vm.accentColor(for: entry.weather),
+        isActive: isHighlighted
       )
       .scaleEffect(isHighlighted ? 1.01 : 1)
       .animation(.spring(response: 0.26, dampingFraction: 0.82), value: isHighlighted)
