@@ -512,7 +512,7 @@
             showRecoveryKeyConfirmation = true
           }
         } message: {
-          Text("아래 키를 안전한 곳에 저장해주세요. 다음 화면에서 같은 키를 다시 입력해야 복구키가 등록됩니다.\n\n\(recoveryKeyToShow)")
+          Text("아래 키를 안전한 곳에 저장해주세요. 다음 화면에서 같은 키를 다시 입력해야 앱 암호와 복구키가 설정됩니다.\n\n\(recoveryKeyToShow)")
         }
         .fileImporter(
           isPresented: $showBackupImport,

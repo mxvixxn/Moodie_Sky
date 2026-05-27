@@ -25,6 +25,17 @@ struct MoodBackupPayload: Codable {
   let entries: [MoodEntry]
 }
 
+private struct PendingPasscodeSetup {
+  let passcodeHash: String
+  let passcodeSalt: String
+  let digitCount: Int
+  let recoveryKey: String
+  let previousPasscodeHash: String?
+  let previousPasscodeSalt: String?
+  let previousRecoveryKeyHash: String?
+  let previousRecoveryKeySalt: String?
+}
+
 
 enum AppStartTab: Int, CaseIterable, Identifiable {
   case record = 0
@@ -376,6 +387,7 @@ final class MoodViewModel: ObservableObject {
   private static let recoveryKeyHashAccount = "recovery_key_hash"
   private static let recoveryKeySaltAccount = "recovery_key_salt"
   private var pendingDeleteIDs: [UUID] = []
+  private var pendingPasscodeSetup: PendingPasscodeSetup?
   private var backgroundEnteredAt: Date?
   private var modelContext: ModelContext?
 
@@ -1261,48 +1273,76 @@ final class MoodViewModel: ObservableObject {
 
     let salt = UUID().uuidString
     let recoveryKey = makeRecoveryKey()
-    guard Self.setKeychainString(salt, account: Self.passcodeSaltAccount),
-      Self.setKeychainString(hashPasscode(trimmedPasscode, salt: salt), account: Self.passcodeHashAccount)
-    else {
-      authErrorMessage = "암호를 안전하게 저장하지 못했어요. 다시 시도해주세요."
-      return false
-    }
-    UserDefaults.standard.removeObject(forKey: passcodeHashKey)
-    UserDefaults.standard.removeObject(forKey: passcodeSaltKey)
-    UserDefaults.standard.set(digitCount, forKey: passcodeDigitCountKey)
-    UserDefaults.standard.set(true, forKey: appLockEnabledKey)
-    passcodeDigitCount = digitCount
-    isAppLockEnabled = true
-    isUnlocked = true
-    lockPasscodeInput = ""
     authErrorMessage = ""
+    pendingPasscodeSetup = PendingPasscodeSetup(
+      passcodeHash: hashPasscode(trimmedPasscode, salt: salt),
+      passcodeSalt: salt,
+      digitCount: digitCount,
+      recoveryKey: recoveryKey,
+      previousPasscodeHash: Self.keychainString(account: Self.passcodeHashAccount),
+      previousPasscodeSalt: Self.keychainString(account: Self.passcodeSaltAccount),
+      previousRecoveryKeyHash: Self.keychainString(account: Self.recoveryKeyHashAccount),
+      previousRecoveryKeySalt: Self.keychainString(account: Self.recoveryKeySaltAccount)
+    )
     latestRecoveryKey = recoveryKey
     return true
   }
 
   func confirmLatestRecoveryKey(_ recoveryKey: String) -> Bool {
-    guard !latestRecoveryKey.isEmpty else {
+    guard let pendingPasscodeSetup else {
       authErrorMessage = "확인할 복구키가 없어요. 앱 암호를 다시 설정해주세요."
       return false
     }
-    guard normalizedRecoveryKey(recoveryKey) == normalizedRecoveryKey(latestRecoveryKey) else {
+    guard normalizedRecoveryKey(recoveryKey) == normalizedRecoveryKey(pendingPasscodeSetup.recoveryKey) else {
       authErrorMessage = "복구키가 맞지 않아요. 저장한 키를 다시 확인해주세요."
       return false
     }
 
     let recoverySalt = UUID().uuidString
-    guard Self.setKeychainString(recoverySalt, account: Self.recoveryKeySaltAccount),
-      Self.setKeychainString(
-        hashRecoveryKey(latestRecoveryKey, salt: recoverySalt),
+    let savedPasscode = Self.setKeychainString(pendingPasscodeSetup.passcodeSalt, account: Self.passcodeSaltAccount)
+      && Self.setKeychainString(pendingPasscodeSetup.passcodeHash, account: Self.passcodeHashAccount)
+    let savedRecoveryKey = Self.setKeychainString(recoverySalt, account: Self.recoveryKeySaltAccount)
+      && Self.setKeychainString(
+        hashRecoveryKey(pendingPasscodeSetup.recoveryKey, salt: recoverySalt),
         account: Self.recoveryKeyHashAccount
       )
-    else {
-      authErrorMessage = "복구키를 안전하게 저장하지 못했어요. 다시 시도해주세요."
+
+    guard savedPasscode && savedRecoveryKey else {
+      restoreKeychainString(pendingPasscodeSetup.previousPasscodeHash, account: Self.passcodeHashAccount)
+      restoreKeychainString(pendingPasscodeSetup.previousPasscodeSalt, account: Self.passcodeSaltAccount)
+      restoreKeychainString(pendingPasscodeSetup.previousRecoveryKeyHash, account: Self.recoveryKeyHashAccount)
+      restoreKeychainString(pendingPasscodeSetup.previousRecoveryKeySalt, account: Self.recoveryKeySaltAccount)
+      authErrorMessage = "암호와 복구키를 안전하게 저장하지 못했어요. 다시 시도해주세요."
       return false
     }
+
+    UserDefaults.standard.removeObject(forKey: passcodeHashKey)
+    UserDefaults.standard.removeObject(forKey: passcodeSaltKey)
+    UserDefaults.standard.set(pendingPasscodeSetup.digitCount, forKey: passcodeDigitCountKey)
+    UserDefaults.standard.set(true, forKey: appLockEnabledKey)
+    passcodeDigitCount = pendingPasscodeSetup.digitCount
+    isAppLockEnabled = true
+    isUnlocked = true
+    lockPasscodeInput = ""
+    resetPasscodeFailures()
     authErrorMessage = ""
+    self.pendingPasscodeSetup = nil
     latestRecoveryKey = ""
     return true
+  }
+
+  func cancelPendingPasscodeSetup() {
+    pendingPasscodeSetup = nil
+    latestRecoveryKey = ""
+    authErrorMessage = ""
+  }
+
+  private func restoreKeychainString(_ value: String?, account: String) {
+    if let value {
+      _ = Self.setKeychainString(value, account: account)
+    } else {
+      Self.deleteKeychainItem(account: account)
+    }
   }
 
   func removePasscode() {
@@ -1321,6 +1361,7 @@ final class MoodViewModel: ObservableObject {
     lockPasscodeInput = ""
     authErrorMessage = ""
     latestRecoveryKey = ""
+    pendingPasscodeSetup = nil
   }
 
   func resetPasscodeWithRecoveryKey(
@@ -1352,6 +1393,7 @@ final class MoodViewModel: ObservableObject {
     showAllDeleteAlert = false
     note = ""
     lockPasscodeInput = ""
+    pendingPasscodeSetup = nil
 
     Self.deleteKeychainItem(account: Self.passcodeHashAccount)
     Self.deleteKeychainItem(account: Self.passcodeSaltAccount)

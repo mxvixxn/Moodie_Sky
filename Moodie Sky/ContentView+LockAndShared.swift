@@ -167,7 +167,7 @@ extension ContentView {
             VStack(alignment: .leading, spacing: 6) {
               Text("복구키 확인")
                 .font(.system(.title, design: .rounded, weight: .bold))
-              Text("방금 저장한 복구키를 다시 입력하면 복구키가 등록돼요.")
+              Text("방금 저장한 복구키를 다시 입력하면 앱 암호와 복구키가 함께 설정돼요.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             }
@@ -195,7 +195,7 @@ extension ContentView {
                 recoveryKeyToShow = ""
               }
             } label: {
-              Text("복구키 등록")
+              Text("암호 설정 완료")
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -208,7 +208,7 @@ extension ContentView {
             }
             .disabled(recoveryKeyConfirmationInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-            Text("등록 전에는 이 복구키로 암호를 되찾을 수 없어요.")
+            Text("완료 전에는 앱 암호와 복구키가 저장되지 않아요.")
               .font(.caption)
               .foregroundStyle(.secondary)
 
@@ -223,10 +223,11 @@ extension ContentView {
               showRecoveryKeyConfirmation = false
               recoveryKeyConfirmationInput = ""
               recoveryKeyToShow = ""
-              vm.latestRecoveryKey = ""
+              vm.cancelPendingPasscodeSetup()
             }
           }
         }
+        .interactiveDismissDisabled()
       }
     }
 
