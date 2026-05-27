@@ -39,15 +39,17 @@ private struct PendingPasscodeSetup {
 
 enum AppStartTab: Int, CaseIterable, Identifiable {
   case record = 0
+  case flow = 2
   case diary = 1
-  case settings = 2
+  case settings = 3
 
   var id: Int { rawValue }
   var label: String {
     switch self {
-    case .record: return "기록"
+    case .record: return "오늘"
     case .diary: return "다이어리"
-    case .settings: return "설정"
+    case .flow: return "흐름"
+    case .settings: return "관리"
     }
   }
 }
@@ -466,7 +468,9 @@ final class MoodViewModel: ObservableObject {
     backupReminderEnabled = defaults.object(forKey: backupReminderEnabledKey) as? Bool ?? true
     backupReminderDays = defaults.object(forKey: backupReminderDaysKey) as? Int ?? 14
     lastBackupExportedAt = defaults.object(forKey: lastBackupExportedAtKey) as? Date
-    preferredStartTab = AppStartTab(rawValue: defaults.integer(forKey: preferredStartTabKey)) ?? .record
+    let storedStartTab = defaults.integer(forKey: preferredStartTabKey)
+    let migratedStartTab = storedStartTab == 2 ? AppStartTab.settings : AppStartTab(rawValue: storedStartTab)
+    preferredStartTab = migratedStartTab ?? .record
     dateDisplayStyle = MoodDateDisplayStyle(
       rawValue: defaults.string(forKey: dateDisplayStyleKey) ?? "korean") ?? .korean
     appTheme = MoodAppTheme(rawValue: defaults.string(forKey: appThemeKey) ?? "system") ?? .system

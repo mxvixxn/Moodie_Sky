@@ -27,8 +27,6 @@ extension ContentView {
             }
           }
         } else {
-          Section { reportDashboard.listRowBackground(Color.clear).listRowInsets(EdgeInsets()) }
-            .listRowSeparator(.hidden)
           Section("\(vm.formattedDate(vm.selectedDate))의 날씨") {
             let dayEntries = vm.entriesForDay(vm.selectedDate)
             if dayEntries.isEmpty {

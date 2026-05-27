@@ -427,25 +427,7 @@
       @State var didRunInitialAppear = false
 
       var body: some View {
-        TabView(selection: $selection) {
-          ZStack {
-            MoodieBackground(colors: vm.backgroundColors())
-            recordView
-          }
-          .tabItem { Label("기록", systemImage: "pencil.line") }.tag(0)
-
-          ZStack {
-            MoodieBackground(colors: vm.backgroundColors())
-            calendarView
-          }
-          .tabItem { Label("다이어리", systemImage: "book.pages") }.tag(1)
-
-          ZStack {
-            MoodieBackground(colors: vm.backgroundColors())
-            settingsView
-          }
-          .tabItem { Label("설정", systemImage: "gearshape") }.tag(2)
-        }
+        rootTabView
         .animation(.easeInOut(duration: 0.22), value: selection)
         .onChange(of: selection) { _, _ in vm.triggerHaptic(.medium) }
         .onAppear {
@@ -459,6 +441,44 @@
           DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeOut(duration: 0.28)) { showLaunchSplash = false }
           }
+        }
+      }
+
+      @ViewBuilder
+      var rootTabView: some View {
+        if #available(iOS 18.0, *) {
+          tabs
+            .tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+          tabs
+        }
+      }
+
+      var tabs: some View {
+        TabView(selection: $selection) {
+          ZStack {
+            MoodieBackground(colors: vm.backgroundColors())
+            recordView
+          }
+          .tabItem { Label("오늘", systemImage: "cloud") }.tag(0)
+
+          ZStack {
+            MoodieBackground(colors: vm.backgroundColors())
+            flowView
+          }
+          .tabItem { Label("흐름", systemImage: "wind") }.tag(2)
+
+          ZStack {
+            MoodieBackground(colors: vm.backgroundColors())
+            calendarView
+          }
+          .tabItem { Label("다이어리", systemImage: "book.pages") }.tag(1)
+
+          ZStack {
+            MoodieBackground(colors: vm.backgroundColors())
+            settingsView
+          }
+          .tabItem { Label("관리", systemImage: "line.3.horizontal") }.tag(3)
         }
         .alert("기록을 삭제할까요?", isPresented: $vm.showDeleteAlert) {
           Button("삭제", role: .destructive) { vm.deleteConfirmed() }

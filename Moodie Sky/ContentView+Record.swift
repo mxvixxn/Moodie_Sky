@@ -3,12 +3,10 @@ import SwiftUI
 extension ContentView {
     var activeTabHeader: some View {
       HStack(spacing: 8) {
-        Image(
-          systemName: selection == 0 ? "pencil.line" : selection == 1 ? "book.pages" : "gearshape"
-        )
+        Image(systemName: activeTabHeaderIcon)
         .font(.caption)
         .foregroundStyle(vm.accentColor(for: vm.selectedWeather))
-        Text(selection == 0 ? "오늘 기록" : selection == 1 ? "마음 다이어리" : "설정")
+        Text(activeTabHeaderTitle)
           .font(.caption)
           .fontWeight(.semibold)
           .foregroundStyle(.secondary)
@@ -17,6 +15,24 @@ extension ContentView {
       .padding(.top, 4)
       .id(selection)
       .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    var activeTabHeaderIcon: String {
+      switch selection {
+      case 0: return "cloud"
+      case 1: return "book.pages"
+      case 2: return "wind"
+      default: return "line.3.horizontal"
+      }
+    }
+
+    var activeTabHeaderTitle: String {
+      switch selection {
+      case 0: return "오늘"
+      case 1: return "다이어리"
+      case 2: return "흐름"
+      default: return "관리"
+      }
     }
 
     // MARK: - 기록 탭
