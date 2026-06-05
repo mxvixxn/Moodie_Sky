@@ -247,15 +247,19 @@
       case offline
       case failed(String)
 
+      private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.timeStyle = .short
+        return f
+      }()
+
       var message: String {
         switch self {
         case .idle: return "iCloud 동기화 대기 중"
         case .syncing: return "iCloud 동기화 중"
         case .synced(let date):
-          let f = DateFormatter()
-          f.locale = Locale(identifier: "ko_KR")
-          f.timeStyle = .short
-          return "마지막 동기화: \(f.string(from: date))"
+          return "마지막 동기화: \(Self.timeFormatter.string(from: date))"
         case .offline: return "오프라인 상태예요. 다음 실행 때 다시 동기화해요."
         case .failed(let msg): return msg
         }
@@ -398,6 +402,8 @@
       @State var showBackupImport = false
       @State var showDeleteAuth = false
       @State var deleteAuthPasscode = ""
+      @State var showPasscodeRemoveAuth = false
+      @State var passcodeRemoveAuthPasscode = ""
       @State var pendingDeleteScope: DataDeleteScope = .all
       @State var isPrivacyShieldVisible = false
       @State var backupAuthPasscode = ""
@@ -544,6 +550,7 @@
           }
         }
         .sheet(isPresented: $showDeleteAuth) { deleteAuthView }
+        .sheet(isPresented: $showPasscodeRemoveAuth) { passcodeRemoveAuthView }
         .preferredColorScheme(vm.appTheme.colorScheme)
         .fullScreenCover(isPresented: $showOnboarding) { onboardingView }
         .overlay {

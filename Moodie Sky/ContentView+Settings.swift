@@ -553,7 +553,7 @@ extension ContentView {
 
         if vm.hasPasscode {
           Button(role: .destructive) {
-            vm.removePasscode()
+            requestPasscodeRemoval()
           } label: {
             Label("암호 삭제", systemImage: "trash")
               .font(.caption).fontWeight(.semibold)
@@ -1405,6 +1405,116 @@ extension ContentView {
       backupAuthPasscode = ""
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
         backupShareItem = BackupShareItem(url: url)
+      }
+    }
+
+    func requestPasscodeRemoval() {
+      passcodeRemoveAuthPasscode = ""
+      vm.authErrorMessage = ""
+      vm.refreshPasscodeLockout()
+      guard !vm.isPasscodeTemporarilyLocked else {
+        showPasscodeRemoveAuth = true
+        return
+      }
+      if vm.isFaceIDEnabled {
+        vm.authenticateProtectedActionWithBiometrics { success in
+          if success {
+            vm.removePasscode()
+          } else {
+            showPasscodeRemoveAuth = true
+          }
+        }
+      } else {
+        showPasscodeRemoveAuth = true
+      }
+    }
+
+    var passcodeRemoveAuthView: some View {
+      NavigationStack {
+        ZStack {
+          MoodieBackground(colors: vm.backgroundColors(for: "폭풍"))
+          VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+              Text("암호 삭제 확인")
+                .font(.system(.title, design: .rounded, weight: .bold))
+              Text("앱 암호를 입력하면 잠금이 해제돼요.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            }
+
+            SecureField("앱 암호", text: $passcodeRemoveAuthPasscode)
+              .keyboardType(.numberPad)
+              .textContentType(.oneTimeCode)
+              .padding()
+              .moodieInsetSurface(
+                cornerRadius: vm.controlCornerRadius,
+                tint: .red,
+                isActive: passcodeRemoveAuthPasscode.count == vm.passcodeDigitCount
+              )
+              .onChange(of: passcodeRemoveAuthPasscode) { _, value in
+                passcodeRemoveAuthPasscode = vm.limitedDigits(value, count: vm.passcodeDigitCount)
+              }
+              .disabled(vm.isPasscodeTemporarilyLocked)
+
+            if vm.isFaceIDEnabled {
+              Button {
+                vm.authenticateProtectedActionWithBiometrics { success in
+                  guard success else { return }
+                  showPasscodeRemoveAuth = false
+                  vm.removePasscode()
+                }
+              } label: {
+                Label("Face ID로 확인", systemImage: "faceid")
+                  .fontWeight(.semibold)
+                  .frame(maxWidth: .infinity)
+                  .padding()
+                  .moodieInsetSurface(cornerRadius: vm.controlCornerRadius, tint: vm.moodieTint)
+              }
+              .buttonStyle(.plain)
+              .disabled(vm.isPasscodeTemporarilyLocked)
+            }
+
+            if let lockoutMessage = vm.passcodeLockoutMessage {
+              Text(lockoutMessage).font(.caption).foregroundStyle(.red)
+            } else if !vm.authErrorMessage.isEmpty {
+              Text(vm.authErrorMessage).font(.caption).foregroundStyle(.red)
+            }
+
+            Button(role: .destructive) {
+              guard vm.validatePasscodeForProtectedAction(passcodeRemoveAuthPasscode) else {
+                passcodeRemoveAuthPasscode = ""
+                return
+              }
+              showPasscodeRemoveAuth = false
+              vm.removePasscode()
+            } label: {
+              Text("암호 삭제")
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .foregroundStyle(.white)
+                .background(
+                  passcodeRemoveAuthPasscode.count == vm.passcodeDigitCount && !vm.isPasscodeTemporarilyLocked
+                    ? Color.red : Color.secondary.opacity(0.35)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: vm.controlCornerRadius, style: .continuous))
+            }
+            .disabled(
+              passcodeRemoveAuthPasscode.count != vm.passcodeDigitCount || vm.isPasscodeTemporarilyLocked)
+
+            Spacer()
+          }
+          .padding()
+        }
+        .navigationTitle("보안 설정")
+        .toolbar {
+          ToolbarItem(placement: .topBarLeading) {
+            Button("취소") {
+              showPasscodeRemoveAuth = false
+              passcodeRemoveAuthPasscode = ""
+              vm.authErrorMessage = ""
+            }
+          }
+        }
       }
     }
 }

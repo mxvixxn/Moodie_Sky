@@ -57,7 +57,7 @@ extension ContentView {
           .listRowSeparator(.hidden)
           .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
 
-          let todayEntries = vm.entries.filter { Calendar.current.isDateInToday($0.date) }
+          let todayEntries = vm.todayEntries
           if todayEntries.isEmpty {
             emptyStateView(
               icon: "sparkles",

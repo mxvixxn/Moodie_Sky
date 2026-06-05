@@ -161,7 +161,7 @@ enum BackupImportError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .fileTooLarge: return "백업 파일이 너무 커요. 5MB 이하 파일만 가져올 수 있어요."
+    case .fileTooLarge: return "백업 파일이 너무 커요. 10MB 이하 파일만 가져올 수 있어요."
     case .unsupportedFormat: return "CSV, JSON 또는 암호화 백업 파일만 가져올 수 있어요."
     case .invalidEncoding: return "파일 인코딩을 읽을 수 없어요."
     case .missingRequiredFields: return "백업 파일에 필요한 항목이 부족해요."
@@ -283,6 +283,46 @@ final class MoodViewModel: ObservableObject {
     let f = DateFormatter()
     f.locale = Locale(identifier: "ko_KR")
     f.dateFormat = "yyyyMMdd-HHmmss"
+    return f
+  }()
+
+  private static let headerDateNumericFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy.MM.dd EEEE"
+    f.locale = Locale(identifier: "ko_KR")
+    return f
+  }()
+
+  private static let headerDateCompactFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "M/d E"
+    f.locale = Locale(identifier: "ko_KR")
+    return f
+  }()
+
+  private static let dateNumericFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy.MM.dd"
+    return f
+  }()
+
+  private static let dateCompactFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "M/d"
+    return f
+  }()
+
+  private static let fullDateNumericFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "ko_KR")
+    f.dateFormat = "yyyy.MM.dd HH:mm"
+    return f
+  }()
+
+  private static let fullDateCompactFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "ko_KR")
+    f.dateFormat = "M/d HH:mm"
     return f
   }()
 
@@ -647,7 +687,8 @@ final class MoodViewModel: ObservableObject {
     let mostFrequent = grouped.max { $0.value.count < $1.value.count }
     let weather = mostFrequent?.key ?? "구름"
     let emoji = weathers.first { $0.0 == weather }?.1 ?? "☁️"
-    return (emoji, "\(weather)이 가장 많았어요")
+    let particle = ["비", "무지개"].contains(weather) ? "가" : "이"
+    return (emoji, "\(weather)\(particle) 가장 많았어요")
   }
 
   func weeklyReport(for date: Date) -> MoodReport {
@@ -802,46 +843,24 @@ final class MoodViewModel: ObservableObject {
   func formattedHeaderDate(_ date: Date) -> String {
     switch dateDisplayStyle {
     case .korean: return Self.headerDateFormatter.string(from: date)
-    case .numeric:
-      let f = DateFormatter()
-      f.dateFormat = "yyyy.MM.dd EEEE"
-      f.locale = Locale(identifier: "ko_KR")
-      return f.string(from: date)
-    case .compact:
-      let f = DateFormatter()
-      f.dateFormat = "M/d E"
-      f.locale = Locale(identifier: "ko_KR")
-      return f.string(from: date)
+    case .numeric: return Self.headerDateNumericFormatter.string(from: date)
+    case .compact: return Self.headerDateCompactFormatter.string(from: date)
     }
   }
 
   func formattedDate(_ date: Date) -> String {
     switch dateDisplayStyle {
     case .korean: return Self.shortDateFormatter.string(from: date)
-    case .numeric:
-      let f = DateFormatter()
-      f.dateFormat = "yyyy.MM.dd"
-      return f.string(from: date)
-    case .compact:
-      let f = DateFormatter()
-      f.dateFormat = "M/d"
-      return f.string(from: date)
+    case .numeric: return Self.dateNumericFormatter.string(from: date)
+    case .compact: return Self.dateCompactFormatter.string(from: date)
     }
   }
 
   func formattedFullDate(_ date: Date) -> String {
     switch dateDisplayStyle {
     case .korean: return Self.fullDateFormatter.string(from: date)
-    case .numeric:
-      let f = DateFormatter()
-      f.locale = Locale(identifier: "ko_KR")
-      f.dateFormat = "yyyy.MM.dd HH:mm"
-      return f.string(from: date)
-    case .compact:
-      let f = DateFormatter()
-      f.locale = Locale(identifier: "ko_KR")
-      f.dateFormat = "M/d HH:mm"
-      return f.string(from: date)
+    case .numeric: return Self.fullDateNumericFormatter.string(from: date)
+    case .compact: return Self.fullDateCompactFormatter.string(from: date)
     }
   }
 
