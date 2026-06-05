@@ -3,30 +3,20 @@ import SwiftUI
 extension ContentView {
     // MARK: - 흐름 탭
     var flowView: some View {
-      List {
-        Section {
-          VStack(alignment: .leading, spacing: 6) {
-            Text("흐름")
-              .font(.system(.largeTitle, design: .rounded, weight: .bold))
-            Text("쌓인 마음 날씨를 조용히 돌아봐요.")
-              .font(.callout)
-              .foregroundStyle(.secondary)
+      NavigationStack {
+        List {
+          Section {
+            reportDashboard
+              .listRowBackground(Color.clear)
+              .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
           }
-          .padding(.top, 12)
-          .listRowBackground(Color.clear)
           .listRowSeparator(.hidden)
-          .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
         }
-
-        Section {
-          reportDashboard
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
-        }
-        .listRowSeparator(.hidden)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .navigationTitle("흐름")
+        .navigationBarTitleDisplayMode(.large)
       }
-      .listStyle(.plain)
-      .scrollContentBackground(.hidden)
     }
 
     // MARK: - 리포트 카드

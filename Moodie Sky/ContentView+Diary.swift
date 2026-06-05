@@ -3,6 +3,7 @@ import SwiftUI
 extension ContentView {
     // MARK: - 다이어리 탭
     var calendarView: some View {
+      NavigationStack {
       List {
         Section { calendarContent.listRowBackground(Color.clear).listRowInsets(EdgeInsets()) }
           .listRowSeparator(.hidden)
@@ -48,6 +49,9 @@ extension ContentView {
       .listStyle(.plain)
       .scrollContentBackground(.hidden)
       .padding(.horizontal)
+      .navigationTitle("다이어리")
+      .navigationBarTitleDisplayMode(.large)
+      }
     }
 
     var isDiarySearchActive: Bool {

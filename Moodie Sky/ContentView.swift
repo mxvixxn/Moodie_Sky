@@ -39,8 +39,8 @@
                     .fill(
                       LinearGradient(
                         colors: [
-                          Color(red: 0.24, green: 0.36, blue: 0.38).opacity(0.16),
-                          Color(red: 0.20, green: 0.18, blue: 0.28).opacity(0.10),
+                          Color(red: 0.24, green: 0.36, blue: 0.38).opacity(0.12),
+                          Color(red: 0.20, green: 0.18, blue: 0.28).opacity(0.08),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -50,18 +50,11 @@
               }
           }
           .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-              .stroke(
-                colorScheme == .dark ? Color.white.opacity(0.10) : Color.primary.opacity(0.055),
-                lineWidth: 1
-              )
-          )
           .shadow(
-            color: colorScheme == .dark ? Color.black.opacity(0.18) : Color.black.opacity(0.035),
-            radius: colorScheme == .dark ? 18 : 10,
+            color: colorScheme == .dark ? Color.black.opacity(0.12) : Color.black.opacity(0.025),
+            radius: colorScheme == .dark ? 12 : 8,
             x: 0,
-            y: colorScheme == .dark ? 10 : 5
+            y: colorScheme == .dark ? 6 : 3
           )
       }
     }
@@ -102,17 +95,15 @@
                     .fill(tint.opacity(isActive ? 0.16 : 0.045))
                 } else if isActive {
                   RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(tint.opacity(0.12))
+                    .fill(tint.opacity(0.10))
                 }
               }
           }
           .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
               .stroke(
-                isActive
-                  ? tint.opacity(colorScheme == .dark ? 0.42 : 0.36)
-                  : (colorScheme == .dark ? Color.white.opacity(0.08) : Color.primary.opacity(0.045)),
-                lineWidth: isActive ? 1.3 : 1
+                isActive ? tint.opacity(colorScheme == .dark ? 0.38 : 0.30) : Color.clear,
+                lineWidth: isActive ? 1.2 : 0
               )
           )
       }
