@@ -237,6 +237,10 @@ final class MoodViewModel: ObservableObject {
   @Published var saveConfirmationText = "오늘의 마음 하늘에 저장했어요"
   @Published var lastSavedEntryID: UUID?
 
+  // MARK: - Streak
+  @Published var shouldShowStreakBrokenAlert = false
+  private var streakBrokenPreviousStreak = 0
+
   // MARK: - DateFormatter
   private static let timeFormatter: DateFormatter = {
     let f = DateFormatter()
@@ -558,6 +562,9 @@ final class MoodViewModel: ObservableObject {
     loadEntries()
     loadPendingDeleteIDs()
     scheduleDailyReminderAfterStartupIfNeeded()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+      self?.checkStreakBrokenOnOpen()
+    }
   }
 
   private func scheduleDailyReminderAfterStartupIfNeeded() {
@@ -663,6 +670,88 @@ final class MoodViewModel: ObservableObject {
     entryToEdit = nil
     UINotificationFeedbackGenerator().notificationOccurred(.success)
     syncWithICloud()
+  }
+
+  // MARK: - Streak 계산
+  /// 오늘 기준 연속 기록 일수 (오늘 기록 있으면 포함, 어제까지만 기록 있어도 포함)
+  var currentStreak: Int {
+    calculateStreak(from: Date())
+  }
+
+  /// 전체 기록 중 역대 최고 연속 일수
+  var longestStreak: Int {
+    guard !entries.isEmpty else { return 0 }
+    let cal = Calendar.current
+    // 기록이 있는 날짜들을 유니크하게 추출해서 정렬
+    let datesWithEntry = Set(entries.map { cal.startOfDay(for: $0.date) })
+      .sorted()
+    var best = 1
+    var current = 1
+    for i in 1..<datesWithEntry.count {
+      let diff = cal.dateComponents([.day], from: datesWithEntry[i - 1], to: datesWithEntry[i]).day ?? 0
+      if diff == 1 {
+        current += 1
+        best = max(best, current)
+      } else if diff > 1 {
+        current = 1
+      }
+    }
+    return best
+  }
+
+  private func calculateStreak(from today: Date) -> Int {
+    let cal = Calendar.current
+    let todayStart = cal.startOfDay(for: today)
+    let datesWithEntry = Set(entries.map { cal.startOfDay(for: $0.date) })
+    guard !datesWithEntry.isEmpty else { return 0 }
+
+    // 오늘 기록이 없으면 어제부터 시작
+    var checkDate: Date
+    if datesWithEntry.contains(todayStart) {
+      checkDate = todayStart
+    } else if let yesterday = cal.date(byAdding: .day, value: -1, to: todayStart),
+              datesWithEntry.contains(yesterday) {
+      checkDate = yesterday
+    } else {
+      return 0
+    }
+
+    var streak = 0
+    while datesWithEntry.contains(checkDate) {
+      streak += 1
+      guard let prev = cal.date(byAdding: .day, value: -1, to: checkDate) else { break }
+      checkDate = prev
+    }
+    return streak
+  }
+
+  /// 오늘 앱을 열었을 때 streak이 끊겼는지 확인. 끊겼으면 alert 띄움.
+  func checkStreakBrokenOnOpen() {
+    let cal = Calendar.current
+    let todayStart = cal.startOfDay(for: Date())
+    let datesWithEntry = Set(entries.map { cal.startOfDay(for: $0.date) })
+    guard !datesWithEntry.isEmpty else { return }
+
+    // 오늘 기록이 없고, 어제 기록도 없고, 그제 이전에 기록이 있으면 → streak 깨짐
+    let yesterday = cal.date(byAdding: .day, value: -1, to: todayStart)!
+    let dayBefore = cal.date(byAdding: .day, value: -2, to: todayStart)!
+
+    let hadYesterday = datesWithEntry.contains(yesterday)
+    let hadToday = datesWithEntry.contains(todayStart)
+    let hadBefore = datesWithEntry.contains(where: { $0 <= dayBefore })
+
+    guard !hadToday && !hadYesterday && hadBefore else { return }
+
+    // streak이 깨진 시점(어제)의 streak 값 계산
+    let brokenStreak = calculateStreak(from: yesterday)
+    guard brokenStreak > 0 else { return }
+
+    streakBrokenPreviousStreak = brokenStreak
+    shouldShowStreakBrokenAlert = true
+  }
+
+  var streakBrokenMessage: String {
+    "\(streakBrokenPreviousStreak)일 연속 기록이 끊겼어요."
   }
 
   // MARK: - 날짜 유틸리티
@@ -1466,6 +1555,7 @@ final class MoodViewModel: ObservableObject {
   }
 
   func handleAppDidBecomeActive() {
+    checkStreakBrokenOnOpen()
     guard isAppLockEnabled else { return }
     guard let backgroundEnteredAt else { return }
     if Date().timeIntervalSince(backgroundEnteredAt) >= lockGraceInterval {
