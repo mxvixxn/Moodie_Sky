@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B1000011300000000000001 /* MoodieSkyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1000002300000000000001 /* MoodieSkyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B1000010300000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A25134552FA83A4E00A86B9B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B1000020300000000000001;
+			remoteInfo = MoodieSkyWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		A2E3AB0C2FA8CB4A005CA7E0 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -13,6 +27,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				B1000011300000000000001 /* MoodieSkyWidgets.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -22,18 +37,56 @@
 /* Begin PBXFileReference section */
 		A251345D2FA83A4E00A86B9B /* Moodie Sky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Moodie Sky.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2E3AAF92FA8CB49005CA7E0 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		B1000001300000000000001 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		B1000002300000000000001 /* MoodieSkyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MoodieSkyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B2000001300000000000001 /* Exceptions for "Moodie Sky" folder in "Moodie Sky" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A251345C2FA83A4E00A86B9B /* Moodie Sky */;
+		};
+		B2000002300000000000001 /* Exceptions for "MoodieSkyWidgets" folder in "MoodieSkyWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				MoodieSkyWidgets.entitlements,
+			);
+			target = B1000020300000000000001 /* MoodieSkyWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A251345F2FA83A4E00A86B9B /* Moodie Sky */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B2000001300000000000001 /* Exceptions for "Moodie Sky" folder in "Moodie Sky" target */,
+			);
 			path = "Moodie Sky";
+			sourceTree = "<group>";
+		};
+		B1000003300000000000001 /* MoodieSkyWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B2000002300000000000001 /* Exceptions for "MoodieSkyWidgets" folder in "MoodieSkyWidgets" target */,
+			);
+			path = MoodieSkyWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A251345A2FA83A4E00A86B9B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1000022300000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -47,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				A251345F2FA83A4E00A86B9B /* Moodie Sky */,
+				B1000003300000000000001 /* MoodieSkyWidgets */,
 				A2E3AAF62FA8CB49005CA7E0 /* Frameworks */,
 				A251345E2FA83A4E00A86B9B /* Products */,
 			);
@@ -56,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				A251345D2FA83A4E00A86B9B /* Moodie Sky.app */,
+				B1000002300000000000001 /* MoodieSkyWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -64,6 +119,7 @@
 			isa = PBXGroup;
 			children = (
 				A2E3AAF92FA8CB49005CA7E0 /* SwiftUI.framework */,
+				B1000001300000000000001 /* WidgetKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -83,6 +139,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B1000012300000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A251345F2FA83A4E00A86B9B /* Moodie Sky */,
@@ -93,6 +150,28 @@
 			productName = "Moodie Sky";
 			productReference = A251345D2FA83A4E00A86B9B /* Moodie Sky.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B1000020300000000000001 /* MoodieSkyWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1000030300000000000001 /* Build configuration list for PBXNativeTarget "MoodieSkyWidgets" */;
+			buildPhases = (
+				B1000021300000000000001 /* Sources */,
+				B1000022300000000000001 /* Frameworks */,
+				B1000023300000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B1000003300000000000001 /* MoodieSkyWidgets */,
+			);
+			name = MoodieSkyWidgets;
+			packageProductDependencies = (
+			);
+			productName = MoodieSkyWidgets;
+			productReference = B1000002300000000000001 /* MoodieSkyWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -105,6 +184,9 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					A251345C2FA83A4E00A86B9B = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					B1000020300000000000001 = {
 						CreatedOnToolsVersion = 26.4.1;
 					};
 				};
@@ -124,12 +206,20 @@
 			projectRoot = "";
 			targets = (
 				A251345C2FA83A4E00A86B9B /* Moodie Sky */,
+				B1000020300000000000001 /* MoodieSkyWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A251345B2FA83A4E00A86B9B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1000023300000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -146,7 +236,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B1000021300000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B1000012300000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B1000020300000000000001 /* MoodieSkyWidgets */;
+			targetProxy = B1000010300000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A25134662FA83A4E00A86B9B /* Debug */ = {
@@ -283,6 +388,7 @@
 				DEVELOPMENT_TEAM = N66K6UABPD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Moodie Sky/Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Moodie Sky 기록을 보호하기 위해 Face ID를 사용합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -318,6 +424,7 @@
 				DEVELOPMENT_TEAM = N66K6UABPD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Moodie Sky/Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Moodie Sky 기록을 보호하기 위해 Face ID를 사용합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -342,6 +449,64 @@
 			};
 			name = Release;
 		};
+		B1000031300000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MoodieSkyWidgets/MoodieSkyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N66K6UABPD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MoodieSkyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MoodieSkyWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mxvixxn.Moodie-Sky.Widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B1000032300000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MoodieSkyWidgets/MoodieSkyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N66K6UABPD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MoodieSkyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MoodieSkyWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mxvixxn.Moodie-Sky.Widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -359,6 +524,15 @@
 			buildConfigurations = (
 				A25134692FA83A4E00A86B9B /* Debug */,
 				A251346A2FA83A4E00A86B9B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B1000030300000000000001 /* Build configuration list for PBXNativeTarget "MoodieSkyWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1000031300000000000001 /* Debug */,
+				B1000032300000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

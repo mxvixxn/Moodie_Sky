@@ -426,6 +426,11 @@
       var body: some View {
         rootTabView
         .animation(.easeInOut(duration: 0.22), value: selection)
+        .onOpenURL { url in
+          if url.scheme == "moodiesky" && url.host == "record" {
+            selection = 0
+          }
+        }
         .onChange(of: selection) { _, _ in vm.triggerHaptic(.medium) }
         .onAppear {
           guard !didRunInitialAppear else { return }

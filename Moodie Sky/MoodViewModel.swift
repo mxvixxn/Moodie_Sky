@@ -6,6 +6,7 @@ import Security
 import SwiftData
 import SwiftUI
 @preconcurrency import UserNotifications
+import WidgetKit
 
 struct MoodReport {
   let title: String
@@ -562,6 +563,7 @@ final class MoodViewModel: ObservableObject {
     loadEntries()
     loadPendingDeleteIDs()
     scheduleDailyReminderAfterStartupIfNeeded()
+    updateWidgetData()
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
       self?.checkStreakBrokenOnOpen()
     }
@@ -604,6 +606,7 @@ final class MoodViewModel: ObservableObject {
     }
     if isReminderEnabled { scheduleDailyReminder() }
     syncWithICloud()
+    updateWidgetData()
   }
 
   private func showSaveConfirmationBriefly() {
@@ -634,6 +637,7 @@ final class MoodViewModel: ObservableObject {
     savePendingDeleteIDs()
     triggerIntenseErrorHaptic()
     syncWithICloud()
+    updateWidgetData()
   }
 
   func deleteAllEntries() {
@@ -644,6 +648,7 @@ final class MoodViewModel: ObservableObject {
     savePendingDeleteIDs()
     triggerIntenseErrorHaptic()
     syncWithICloud()
+    updateWidgetData()
   }
 
   func beginEditing(_ entry: MoodEntry) {
@@ -670,6 +675,44 @@ final class MoodViewModel: ObservableObject {
     entryToEdit = nil
     UINotificationFeedbackGenerator().notificationOccurred(.success)
     syncWithICloud()
+    updateWidgetData()
+  }
+
+  // MARK: - 위젯 데이터 업데이트
+  func updateWidgetData() {
+    let cal = Calendar.current
+    let today = Date()
+
+    // 주간 엔트리: 최근 7일 중 가장 최근 기록
+    var weeklyEntries: [MoodieWidgetData.WeeklyEntry] = []
+    for offset in (0..<7).reversed() {
+      guard let day = cal.date(byAdding: .day, value: -offset, to: today) else { continue }
+      let dayEntries = entriesForDay(day)
+      if let latest = dayEntries.last {
+        weeklyEntries.append(.init(
+          emoji: latest.emoji,
+          weather: latest.weather,
+          note: latest.note,
+          date: latest.date,
+          dayOfWeek: cal.component(.weekday, from: day)
+        ))
+      }
+    }
+
+    // 월간 기록 날짜
+    let monthEntries = entriesForMonth(today)
+    let recordedDays = Array(Set(monthEntries.map { cal.component(.day, from: $0.date) })).sorted()
+
+    MoodieWidgetData.update(
+      currentStreak: currentStreak,
+      longestStreak: longestStreak,
+      weeklyEntries: weeklyEntries,
+      monthlyRecordedDays: recordedDays,
+      currentMonth: today,
+      totalEntries: entries.count
+    )
+
+    WidgetCenter.shared.reloadAllTimelines()
   }
 
   // MARK: - Streak 계산

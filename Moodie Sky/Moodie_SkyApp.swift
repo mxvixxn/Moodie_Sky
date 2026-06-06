@@ -8,5 +8,6 @@ struct Moodie_SkyApp: App {
             ContentView()
         }
         .modelContainer(for: MoodEntry.self)
+        .handlesExternalEvents(matching: ["*"])
     }
 }
