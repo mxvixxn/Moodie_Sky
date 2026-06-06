@@ -5,18 +5,18 @@ extension ContentView {
     // MARK: - 설정 탭
     var settingsView: some View {
       NavigationStack {
-        ZStack {
-          MoodieBackground(colors: vm.backgroundColors())
-          List {
-            Section {
-              settingsCategoryRow(route: .general, icon: "slider.horizontal.3", title: "일반", subtitle: "앱 상태와 기본 정보를 확인해요")
-              settingsCategoryRow(route: .notifications, icon: "bell", title: "알림", subtitle: vm.isReminderEnabled ? "매일 알림 켜짐" : "매일 알림 꺼짐")
-              settingsCategoryRow(route: .security, icon: "lock", title: "보안", subtitle: vm.hasPasscode ? "앱 암호 켜짐" : "앱 암호 꺼짐")
-              settingsCategoryRow(route: .data, icon: "externaldrive", title: "데이터 관리", subtitle: "백업 내보내기와 초기화를 관리해요")
-            }
+        List {
+          Section {
+            settingsCategoryRow(route: .general, icon: "slider.horizontal.3", title: "일반", subtitle: "앱 상태와 기본 정보를 확인해요")
+            settingsCategoryRow(route: .notifications, icon: "bell", title: "알림", subtitle: vm.isReminderEnabled ? "매일 알림 켜짐" : "매일 알림 꺼짐")
+            settingsCategoryRow(route: .security, icon: "lock", title: "보안", subtitle: vm.hasPasscode ? "앱 암호 켜짐" : "앱 암호 꺼짐")
+            settingsCategoryRow(route: .data, icon: "externaldrive", title: "데이터 관리", subtitle: "백업 내보내기와 초기화를 관리해요")
           }
-          .listStyle(.insetGrouped)
-          .scrollContentBackground(.hidden)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background {
+          MoodieBackground(colors: vm.backgroundColors())
         }
         .navigationTitle("설정")
         .navigationDestination(for: SettingsRoute.self) { route in
@@ -73,13 +73,13 @@ extension ContentView {
       title: String,
       @ViewBuilder content: () -> Content
     ) -> some View {
-      ZStack {
+      List {
+        content()
+      }
+      .listStyle(.insetGrouped)
+      .scrollContentBackground(.hidden)
+      .background {
         MoodieBackground(colors: vm.backgroundColors())
-        List {
-          content()
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
       }
       .navigationTitle(title)
       .navigationBarTitleDisplayMode(.large)
