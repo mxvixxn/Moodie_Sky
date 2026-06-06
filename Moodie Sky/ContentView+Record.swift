@@ -102,18 +102,16 @@ extension ContentView {
       VStack(alignment: .leading, spacing: 16) {
         VStack(alignment: .leading, spacing: 5) {
           Text("Moodie Sky")
-            .font(.system(.caption, design: .rounded, weight: .bold))
+            .font(.system(.title3, design: .rounded, weight: .bold))
             .foregroundStyle(vm.moodieTint)
-            .textCase(.uppercase)
-            .tracking(0.8)
           Text(vm.formattedHeaderDate(Date()))
-            .font(.system(.title, design: .rounded, weight: .bold))
+            .font(.system(.largeTitle, design: .rounded, weight: .bold))
             .foregroundStyle(.primary)
           Text(vm.todayPrompt)
-            .font(.subheadline)
+            .font(.callout)
             .foregroundStyle(.secondary)
         }
-        .padding(.top, 4)
+        .padding(.top, 6)
 
         todaySummaryCard
         weatherSelector
