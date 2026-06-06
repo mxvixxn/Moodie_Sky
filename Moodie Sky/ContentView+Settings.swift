@@ -5,20 +5,45 @@ extension ContentView {
     // MARK: - 설정 탭
     var settingsView: some View {
       NavigationStack {
-        List {
-          Section {
-            settingsCategoryRow(route: .general, icon: "slider.horizontal.3", title: "일반", subtitle: "앱 상태와 기본 정보를 확인해요")
-            settingsCategoryRow(route: .notifications, icon: "bell", title: "알림", subtitle: vm.isReminderEnabled ? "매일 알림 켜짐" : "매일 알림 꺼짐")
-            settingsCategoryRow(route: .security, icon: "lock", title: "보안", subtitle: vm.hasPasscode ? "앱 암호 켜짐" : "앱 암호 꺼짐")
-            settingsCategoryRow(route: .data, icon: "externaldrive", title: "데이터 관리", subtitle: "백업 내보내기와 초기화를 관리해요")
+        ZStack {
+          MoodieBackground(colors: vm.backgroundColors())
+          ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+              Text("설정")
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .padding(.top, 6)
+
+              VStack(spacing: 10) {
+                settingsCategoryRow(
+                  route: .general,
+                  icon: "slider.horizontal.3",
+                  title: "일반",
+                  subtitle: "앱 상태와 기본 정보를 확인해요"
+                )
+                settingsCategoryRow(
+                  route: .notifications,
+                  icon: "bell",
+                  title: "알림",
+                  subtitle: vm.isReminderEnabled ? "매일 알림 켜짐" : "매일 알림 꺼짐"
+                )
+                settingsCategoryRow(
+                  route: .security,
+                  icon: "lock",
+                  title: "보안",
+                  subtitle: vm.hasPasscode ? "앱 암호 켜짐" : "앱 암호 꺼짐"
+                )
+                settingsCategoryRow(
+                  route: .data,
+                  icon: "externaldrive",
+                  title: "데이터 관리",
+                  subtitle: "백업 내보내기와 초기화를 관리해요"
+                )
+              }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
           }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background {
-          MoodieBackground(colors: vm.backgroundColors())
-        }
-        .navigationTitle("설정")
         .navigationDestination(for: SettingsRoute.self) { route in
           settingsDetailView(for: route)
         }
@@ -32,14 +57,18 @@ extension ContentView {
       subtitle: String
     ) -> some View {
       NavigationLink(value: route) {
-        HStack(spacing: 14) {
+        HStack(spacing: 15) {
           MoodieIconBadge(systemName: icon, color: vm.moodieTint)
-          VStack(alignment: .leading, spacing: 2) {
-            Text(title).fontWeight(.semibold)
+          VStack(alignment: .leading, spacing: 3) {
+            Text(title).fontWeight(.semibold).foregroundStyle(.primary)
             Text(subtitle).font(.caption).foregroundStyle(.secondary)
           }
+          Spacer()
+          Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
         }
+        .moodieCard(cornerRadius: vm.controlCornerRadius)
       }
+      .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -47,24 +76,24 @@ extension ContentView {
       switch route {
       case .general:
         settingsDetailContainer(title: "일반") {
-          generalSection
-          Section { tutorialReplayRow }
+          generalSettingsCard
+          tutorialReplayButton
         }
       case .notifications:
         settingsDetailContainer(title: "알림") {
-          reminderSection
+          reminderSettingsCard
         }
       case .security:
         settingsDetailContainer(title: "보안") {
-          securityStatusSection
-          privacySection
+          securityStatusDashboard
+          privacySettingsCard
         }
       case .data:
         settingsDetailContainer(title: "데이터 관리") {
-          dataSummarySection
-          backupSection
-          dataImportSection
-          dataDeleteSection
+          dataSummaryCard
+          backupSettingsCard
+          dataImportButton
+          dataDeleteButton
         }
       }
     }
@@ -73,21 +102,23 @@ extension ContentView {
       title: String,
       @ViewBuilder content: () -> Content
     ) -> some View {
-      List {
-        content()
-      }
-      .listStyle(.insetGrouped)
-      .scrollContentBackground(.hidden)
-      .background {
+      ZStack {
         MoodieBackground(colors: vm.backgroundColors())
+        ScrollView {
+          VStack(alignment: .leading, spacing: 14) {
+            content()
+          }
+          .padding()
+        }
       }
       .navigationTitle(title)
-      .navigationBarTitleDisplayMode(.large)
+      .navigationBarTitleDisplayMode(.inline)
     }
+    var generalSettingsCard: some View {
+      VStack(alignment: .leading, spacing: 14) {
+        Label("기본 사용", systemImage: "slider.horizontal.3")
+          .fontWeight(.semibold)
 
-    // MARK: - 일반 섹션
-    var generalSection: some View {
-      Section("기본 사용") {
         settingsMenuRow(
           icon: "rectangle.stack",
           title: "시작 화면",
@@ -98,6 +129,7 @@ extension ContentView {
           optionTitle: { $0.label },
           onSelect: { vm.setPreferredStartTab($0) }
         )
+
         settingsMenuRow(
           icon: "calendar",
           title: "날짜 표시",
@@ -108,6 +140,7 @@ extension ContentView {
           optionTitle: { $0.label },
           onSelect: { vm.setDateDisplayStyle($0) }
         )
+
         settingsMenuRow(
           icon: "circle.lefthalf.filled",
           title: "앱 테마",
@@ -118,6 +151,7 @@ extension ContentView {
           optionTitle: { $0.label },
           onSelect: { vm.setAppTheme($0) }
         )
+
         settingsMenuRow(
           icon: "cloud.sun",
           title: "기본 날씨",
@@ -132,6 +166,7 @@ extension ContentView {
           onSelect: { vm.setDefaultWeather($0) }
         )
       }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
     }
 
     func settingsMenuRow<Option: Hashable>(
@@ -150,11 +185,10 @@ extension ContentView {
             onSelect(option)
           } label: {
             HStack {
-              Text(optionTitle(option))
               if option == selection {
-                Spacer()
                 Image(systemName: "checkmark")
               }
+              Text(optionTitle(option))
             }
           }
         }
@@ -164,7 +198,8 @@ extension ContentView {
             .font(.system(size: 15, weight: .semibold))
             .foregroundStyle(vm.moodieTint)
             .frame(width: 24, height: 24)
-          VStack(alignment: .leading, spacing: 2) {
+
+          VStack(alignment: .leading, spacing: 3) {
             Text(title)
               .font(.subheadline)
               .fontWeight(.semibold)
@@ -174,11 +209,14 @@ extension ContentView {
               .foregroundStyle(.secondary)
               .fixedSize(horizontal: false, vertical: true)
           }
+
           Spacer(minLength: 12)
-          HStack(spacing: 4) {
+
+          HStack(spacing: 6) {
             Text(currentValue)
               .font(.subheadline)
-              .foregroundStyle(.secondary)
+              .fontWeight(.semibold)
+              .foregroundStyle(.primary)
               .lineLimit(1)
               .minimumScaleFactor(0.82)
             Image(systemName: "chevron.up.chevron.down")
@@ -187,7 +225,11 @@ extension ContentView {
               .foregroundStyle(.tertiary)
           }
         }
-        .contentShape(Rectangle())
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .moodieInsetSurface(cornerRadius: 14, tint: vm.moodieTint)
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
       }
       .buttonStyle(.plain)
     }
@@ -216,41 +258,78 @@ extension ContentView {
       vm.passcodeLockoutOptions.first { $0.seconds == duration }?.label ?? "\(Int(duration))초"
     }
 
-    var tutorialReplayRow: some View {
+    var tutorialReplayButton: some View {
       Button {
         onboardingPage = 0
         showOnboarding = true
       } label: {
-        HStack(spacing: 14) {
+        HStack(spacing: 15) {
           MoodieIconBadge(systemName: "questionmark.circle", color: vm.moodieTint)
-          VStack(alignment: .leading, spacing: 2) {
-            Text("튜토리얼 다시 보기").fontWeight(.semibold).foregroundStyle(.primary)
+          VStack(alignment: .leading, spacing: 3) {
+            Text("튜토리얼 다시 보기").fontWeight(.semibold)
             Text("기록과 다이어리 사용법을 다시 볼 수 있어요").font(.caption).foregroundStyle(.secondary)
           }
           Spacer()
           Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
         }
-      }
-      .buttonStyle(.plain)
+        .moodieCard(cornerRadius: vm.controlCornerRadius)
+      }.buttonStyle(.plain)
     }
 
-    // MARK: - 알림 섹션
-    @ViewBuilder var reminderSection: some View {
-      Section {
-        Toggle(isOn: Binding(get: { vm.isReminderEnabled }, set: { vm.setReminderEnabled($0) })) {
+    var backupSettingsCard: some View {
+      VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 15) {
+          MoodieIconBadge(systemName: "square.and.arrow.up", color: vm.moodieTint)
+          VStack(alignment: .leading, spacing: 3) {
+            Text("백업 파일").fontWeight(.semibold)
+            Text("CSV, JSON 또는 암호화 백업으로 저장해요")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          Spacer()
+        }
+
+        Button {
+          requestBackupExport()
+        } label: {
+          HStack {
+            Label("내보내기", systemImage: "square.and.arrow.up")
+              .fontWeight(.semibold)
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+          }
+          .moodieSecondaryControl()
+        }
+        .buttonStyle(.plain)
+
+        if let lockoutMessage = vm.passcodeLockoutMessage {
+          Text(lockoutMessage).font(.caption).foregroundStyle(.red)
+        }
+      }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
+    }
+    var reminderSettingsCard: some View {
+      VStack(alignment: .leading, spacing: 14) {
+        Toggle(
+          isOn: Binding(
+            get: { vm.isReminderEnabled },
+            set: { vm.setReminderEnabled($0) }
+          )
+        ) {
           Label("마음 날씨 알림", systemImage: "bell").fontWeight(.semibold)
         }
         .tint(vm.moodieTint)
-        if vm.isReminderEnabled {
-          DatePicker(
-            "알림 시간",
-            selection: Binding(get: { vm.reminderTime }, set: { vm.updateReminderTime($0) }),
-            displayedComponents: .hourAndMinute
-          )
-        }
-      }
 
-      Section {
+        DatePicker(
+          "알림 시간",
+          selection: Binding(
+            get: { vm.reminderTime },
+            set: { vm.updateReminderTime($0) }
+          ),
+          displayedComponents: .hourAndMinute
+        )
+        .disabled(!vm.isReminderEnabled)
+
         VStack(alignment: .leading, spacing: 8) {
           Text("알림 요일").font(.subheadline).fontWeight(.semibold)
           HStack(spacing: 6) {
@@ -260,17 +339,20 @@ extension ContentView {
                 vm.toggleReminderWeekday(weekday)
               } label: {
                 Text(day.prefix(1))
-                  .font(.caption).fontWeight(.bold)
+                  .font(.caption)
+                  .fontWeight(.bold)
                   .frame(maxWidth: .infinity)
                   .padding(.vertical, 9)
-                  .moodieInsetSurface(cornerRadius: 10, tint: vm.moodieTint, isActive: vm.selectedReminderWeekdays.contains(weekday))
+                  .moodieInsetSurface(
+                    cornerRadius: 10,
+                    tint: vm.moodieTint,
+                    isActive: vm.selectedReminderWeekdays.contains(weekday)
+                  )
               }
               .buttonStyle(.plain)
-              .disabled(!vm.isReminderEnabled)
             }
           }
         }
-        .padding(.vertical, 4)
 
         settingsMenuRow(
           icon: "text.bubble",
@@ -282,40 +364,91 @@ extension ContentView {
           optionTitle: { $0.label },
           onSelect: { vm.setReminderToneStyle($0) }
         )
-        .disabled(!vm.isReminderEnabled)
 
-        Toggle("오늘 기록했으면 알림 생략", isOn: Binding(get: { vm.skipsReminderAfterTodayEntry }, set: { vm.setSkipsReminderAfterTodayEntry($0) }))
-          .tint(vm.moodieTint)
-          .disabled(!vm.isReminderEnabled)
-      }
+        Toggle(
+          "오늘 기록했으면 알림 생략",
+          isOn: Binding(
+            get: { vm.skipsReminderAfterTodayEntry },
+            set: { vm.setSkipsReminderAfterTodayEntry($0) }
+          )
+        )
+        .tint(vm.moodieTint)
 
-      Section {
-        Toggle("조용한 시간", isOn: Binding(get: { vm.quietHoursEnabled }, set: { vm.setQuietHoursEnabled($0) }))
-          .tint(vm.moodieTint)
+        Toggle(
+          "조용한 시간",
+          isOn: Binding(
+            get: { vm.quietHoursEnabled },
+            set: { vm.setQuietHoursEnabled($0) }
+          )
+        )
+        .tint(vm.moodieTint)
+
         if vm.quietHoursEnabled {
           DatePicker("시작", selection: Binding(get: { vm.quietHoursStart }, set: { vm.updateQuietHoursStart($0) }), displayedComponents: .hourAndMinute)
           DatePicker("끝", selection: Binding(get: { vm.quietHoursEnd }, set: { vm.updateQuietHoursEnd($0) }), displayedComponents: .hourAndMinute)
         }
-      }
 
-      Section {
-        Toggle("백업 리마인더", isOn: Binding(get: { vm.backupReminderEnabled }, set: { vm.setBackupReminderEnabled($0) }))
-          .tint(vm.moodieTint)
+        Divider().opacity(0.45)
+
+        Toggle(
+          "백업 리마인더",
+          isOn: Binding(
+            get: { vm.backupReminderEnabled },
+            set: { vm.setBackupReminderEnabled($0) }
+          )
+        )
+        .tint(vm.moodieTint)
+
         Stepper("백업 알림 간격: \(vm.backupReminderDays)일", value: Binding(get: { vm.backupReminderDays }, set: { vm.setBackupReminderDays($0) }), in: 7...90, step: 7)
           .disabled(!vm.backupReminderEnabled)
       }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
     }
+    var securityStatusDashboard: some View {
+      VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 15) {
+          MoodieIconBadge(systemName: "shield.checkered", color: vm.moodieTint)
+          VStack(alignment: .leading, spacing: 3) {
+            Text("현재 보호 상태").fontWeight(.semibold)
+            Text("개인 기록을 지키는 설정을 한눈에 확인해요")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          Spacer()
+        }
 
-    // MARK: - 보안 상태 섹션
-    var securityStatusSection: some View {
-      Section {
-        securityStatusRow(icon: "lock.fill", title: "앱 암호", isEnabled: vm.hasPasscode, enabledText: "켜짐", disabledText: "꺼짐")
-        securityStatusRow(icon: "faceid", title: "Face ID", isEnabled: vm.isFaceIDEnabled, enabledText: "켜짐", disabledText: vm.hasPasscode ? "꺼짐" : "암호 필요")
-        securityStatusRow(icon: "rectangle.on.rectangle.slash", title: "미리보기 보호", isEnabled: vm.obscuresAppSwitcher, enabledText: "켜짐", disabledText: "꺼짐")
-        securityStatusRow(icon: "lock.doc.fill", title: "암호화 백업", isEnabled: vm.hasPasscode, enabledText: "사용 가능", disabledText: "암호 필요")
-      } header: {
-        Label("현재 보호 상태", systemImage: "shield.checkered")
+        VStack(spacing: 9) {
+          securityStatusRow(
+            icon: "lock.fill",
+            title: "앱 암호",
+            isEnabled: vm.hasPasscode,
+            enabledText: "켜짐",
+            disabledText: "꺼짐"
+          )
+          securityStatusRow(
+            icon: "faceid",
+            title: "Face ID",
+            isEnabled: vm.isFaceIDEnabled,
+            enabledText: "켜짐",
+            disabledText: vm.hasPasscode ? "꺼짐" : "암호 필요"
+          )
+          securityStatusRow(
+            icon: "rectangle.on.rectangle.slash",
+            title: "미리보기 보호",
+            isEnabled: vm.obscuresAppSwitcher,
+            enabledText: "켜짐",
+            disabledText: "꺼짐"
+          )
+          securityStatusRow(
+            icon: "lock.doc.fill",
+            title: "암호화 백업",
+            isEnabled: vm.hasPasscode,
+            enabledText: "사용 가능",
+            disabledText: "암호 필요"
+          )
+        }
       }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
     }
 
     func securityStatusRow(
@@ -329,21 +462,33 @@ extension ContentView {
         Image(systemName: icon)
           .font(.system(size: 14, weight: .semibold))
           .foregroundStyle(isEnabled ? vm.moodieTint : .secondary)
-          .frame(width: 24)
-        Text(title).font(.subheadline).fontWeight(.semibold)
+          .frame(width: 24, height: 24)
+        Text(title)
+          .font(.subheadline)
+          .fontWeight(.semibold)
         Spacer()
         Text(isEnabled ? enabledText : disabledText)
-          .font(.caption).fontWeight(.semibold)
+          .font(.caption)
+          .fontWeight(.semibold)
           .foregroundStyle(isEnabled ? vm.moodieTint : .secondary)
-          .padding(.horizontal, 10).padding(.vertical, 6)
+          .padding(.horizontal, 10)
+          .padding(.vertical, 6)
           .background((isEnabled ? vm.moodieTint : Color.secondary).opacity(0.10))
           .clipShape(Capsule())
       }
+      .padding(.vertical, 2)
     }
 
-    // MARK: - 앱 암호 섹션
-    @ViewBuilder var privacySection: some View {
-      Section {
+    var privacySettingsCard: some View {
+      VStack(alignment: .leading, spacing: 14) {
+        HStack {
+          Label("앱 암호", systemImage: "lock").fontWeight(.semibold)
+          Spacer()
+          Text(vm.hasPasscode ? "켜짐" : "꺼짐")
+            .font(.caption).fontWeight(.semibold)
+            .foregroundStyle(vm.hasPasscode ? vm.moodieTint : .secondary)
+        }
+
         Button {
           passcodeSetupDigitCount = vm.passcodeDigitCount
           newPasscode = ""
@@ -351,26 +496,33 @@ extension ContentView {
           showPasscodeSetup = true
         } label: {
           HStack {
-            Image(systemName: "lock.fill")
-              .font(.system(size: 15, weight: .semibold))
-              .foregroundStyle(vm.moodieTint)
-              .frame(width: 24)
-            Text(vm.hasPasscode ? "암호 변경" : "암호 만들기")
-              .fontWeight(.semibold).foregroundStyle(.primary)
+            Text(vm.hasPasscode ? "암호 변경" : "암호 만들기").fontWeight(.semibold)
             Spacer()
             Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
           }
+          .moodieSecondaryControl()
         }
         .buttonStyle(.plain)
 
-        Toggle(isOn: Binding(get: { vm.isFaceIDEnabled }, set: { vm.setFaceIDEnabled($0) })) {
+        Toggle(
+          isOn: Binding(
+            get: { vm.isFaceIDEnabled },
+            set: { vm.setFaceIDEnabled($0) }
+          )
+        ) {
           Label("Face ID로 바로 해제", systemImage: "faceid").fontWeight(.semibold)
         }
         .disabled(!vm.hasPasscode)
         .tint(vm.moodieTint)
 
-        Toggle("앱 전환 화면 가리기", isOn: Binding(get: { vm.obscuresAppSwitcher }, set: { vm.setObscuresAppSwitcher($0) }))
-          .tint(vm.moodieTint)
+        Toggle(
+          "앱 전환 화면 가리기",
+          isOn: Binding(
+            get: { vm.obscuresAppSwitcher },
+            set: { vm.setObscuresAppSwitcher($0) }
+          )
+        )
+        .tint(vm.moodieTint)
 
         settingsMenuRow(
           icon: "timer",
@@ -395,96 +547,96 @@ extension ContentView {
           onSelect: { vm.updatePasscodeLockoutDuration($0) }
         )
         .disabled(!vm.hasPasscode)
-      } header: {
-        Text("앱 암호")
-      } footer: {
-        Text("내보내기와 데이터 삭제는 항상 Face ID 또는 앱 암호 확인 후 진행돼요.")
-      }
 
-      if vm.hasPasscode {
-        Section {
+        Text("내보내기와 데이터 삭제는 항상 Face ID 또는 앱 암호 확인 후 진행돼요.")
+          .font(.caption).foregroundStyle(.secondary)
+
+        if vm.hasPasscode {
           Button(role: .destructive) {
             requestPasscodeRemoval()
           } label: {
-            Label("암호 삭제", systemImage: "trash").fontWeight(.semibold)
+            Label("암호 삭제", systemImage: "trash")
+              .font(.caption).fontWeight(.semibold)
           }
         }
-      }
 
-      if !vm.authErrorMessage.isEmpty {
-        Section {
+        if !vm.authErrorMessage.isEmpty {
           Text(vm.authErrorMessage).font(.caption).foregroundStyle(.red)
         }
       }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
+    }
+    var dataSummaryCard: some View {
+      VStack(alignment: .leading, spacing: 12) {
+        Label("데이터 요약", systemImage: "chart.bar.doc.horizontal")
+          .fontWeight(.semibold)
+        Text(vm.dataSummaryText)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+        Text(vm.backupSummaryText)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
     }
 
-    // MARK: - 데이터 섹션
-    var dataSummarySection: some View {
-      Section("데이터 요약") {
-        HStack {
-          Text("기록").fontWeight(.semibold)
+    var dataImportButton: some View {
+      Button {
+        showBackupImport = true
+      } label: {
+        HStack(spacing: 15) {
+          MoodieIconBadge(systemName: "square.and.arrow.down", color: vm.moodieTint)
+          VStack(alignment: .leading, spacing: 3) {
+            Text("백업 가져오기").fontWeight(.semibold)
+            Text("CSV 또는 JSON 백업을 현재 기록에 합쳐요").font(.caption).foregroundStyle(.secondary)
+          }
           Spacer()
-          Text(vm.dataSummaryText).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
         }
-        HStack {
-          Text("마지막 백업").fontWeight(.semibold)
-          Spacer()
-          Text(vm.backupSummaryText).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
-        }
+        .moodieCard(cornerRadius: vm.controlCornerRadius)
       }
+      .buttonStyle(.plain)
     }
 
-    var backupSection: some View {
-      Section {
-        Button {
-          requestBackupExport()
-        } label: {
-          Label("내보내기", systemImage: "square.and.arrow.up")
+    var dataDeleteButton: some View {
+      VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 4) {
+          Label("위험 작업", systemImage: "exclamationmark.triangle")
             .fontWeight(.semibold)
-            .foregroundStyle(vm.moodieTint)
+            .foregroundStyle(.red)
+          Text("삭제 전 앱 암호를 확인하지만, 완료된 삭제는 되돌릴 수 없어요.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
-        if let lockoutMessage = vm.passcodeLockoutMessage {
-          Text(lockoutMessage).font(.caption).foregroundStyle(.red)
-        }
-      } header: {
-        Text("백업 파일")
-      } footer: {
-        Text("CSV, JSON 또는 암호화 백업으로 저장해요")
-      }
-    }
 
-    var dataImportSection: some View {
-      Section {
-        Button {
-          showBackupImport = true
-        } label: {
-          Label("백업 가져오기", systemImage: "square.and.arrow.down")
-            .fontWeight(.semibold)
-            .foregroundStyle(vm.moodieTint)
-        }
-        .buttonStyle(.plain)
-      } footer: {
-        Text("CSV 또는 JSON 백업을 현재 기록에 합쳐요")
-      }
-    }
+        VStack(spacing: 8) {
+          destructiveSettingsRow(
+            title: "오늘 기록 삭제",
+            subtitle: "오늘 남긴 기록만 정리해요.",
+            icon: "calendar.badge.minus"
+          ) {
+            requestDataDelete(.today)
+          }
 
-    var dataDeleteSection: some View {
-      Section {
-        destructiveSettingsRow(title: "오늘 기록 삭제", subtitle: "오늘 남긴 기록만 정리해요.", icon: "calendar.badge.minus") {
-          requestDataDelete(.today)
+          destructiveSettingsRow(
+            title: "이번 달 기록 삭제",
+            subtitle: "이번 달 기록을 한 번에 지워요.",
+            icon: "calendar"
+          ) {
+            requestDataDelete(.month)
+          }
+
+          destructiveSettingsRow(
+            title: "모든 데이터 초기화",
+            subtitle: "기록과 설정 데이터를 모두 초기 상태로 돌려요.",
+            icon: "trash.fill"
+          ) {
+            requestDataDelete(.all)
+          }
         }
-        destructiveSettingsRow(title: "이번 달 기록 삭제", subtitle: "이번 달 기록을 한 번에 지워요.", icon: "calendar") {
-          requestDataDelete(.month)
-        }
-        destructiveSettingsRow(title: "모든 데이터 초기화", subtitle: "기록과 설정 데이터를 모두 초기 상태로 돌려요.", icon: "trash.fill") {
-          requestDataDelete(.all)
-        }
-      } header: {
-        Label("위험 작업", systemImage: "exclamationmark.triangle").foregroundStyle(.red)
-      } footer: {
-        Text("삭제 전 앱 암호를 확인하지만, 완료된 삭제는 되돌릴 수 없어요.")
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
     }
 
     func destructiveSettingsRow(
@@ -498,13 +650,29 @@ extension ContentView {
           Image(systemName: icon)
             .font(.system(size: 15, weight: .semibold))
             .foregroundStyle(.red)
-            .frame(width: 24)
+            .frame(width: 34, height: 34)
+            .moodieInsetSurface(cornerRadius: 10, tint: .red, isActive: true)
+
           VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.subheadline).fontWeight(.semibold).foregroundStyle(.primary)
-            Text(subtitle).font(.caption).foregroundStyle(.secondary)
-              .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            Text(title)
+              .font(.subheadline)
+              .fontWeight(.semibold)
+              .foregroundStyle(.primary)
+            Text(subtitle)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .lineLimit(2)
+              .fixedSize(horizontal: false, vertical: true)
           }
+
+          Spacer(minLength: 8)
+
+          Image(systemName: "chevron.right")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
         }
+        .padding(12)
+        .moodieInsetSurface(cornerRadius: 14, tint: .red)
       }
       .buttonStyle(.plain)
     }
