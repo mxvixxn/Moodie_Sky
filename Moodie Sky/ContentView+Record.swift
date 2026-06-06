@@ -47,11 +47,11 @@ extension ContentView {
         }
 
         Section {
-          HStack {
-            Text("오늘의 날씨").font(.headline)
+          HStack(alignment: .firstTextBaseline) {
+            Text("오늘의 날씨").font(.subheadline).fontWeight(.semibold)
             Spacer()
             Text("\(vm.todayEntriesCount)개")
-              .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+              .font(.caption2).fontWeight(.bold).foregroundStyle(.tertiary)
           }
           .listRowBackground(Color.clear)
           .listRowSeparator(.hidden)
@@ -99,39 +99,41 @@ extension ContentView {
     }
 
     var recordInputCard: some View {
-      VStack(alignment: .leading, spacing: 18) {
-        VStack(alignment: .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 5) {
           Text("Moodie Sky")
-            .font(.system(.title3, design: .rounded, weight: .bold))
+            .font(.system(.caption, design: .rounded, weight: .bold))
             .foregroundStyle(vm.moodieTint)
+            .textCase(.uppercase)
+            .tracking(0.8)
           Text(vm.formattedHeaderDate(Date()))
-            .font(.system(.largeTitle, design: .rounded, weight: .bold))
+            .font(.system(.title, design: .rounded, weight: .bold))
             .foregroundStyle(.primary)
           Text(vm.todayPrompt)
-            .font(.callout)
+            .font(.subheadline)
             .foregroundStyle(.secondary)
         }
-        .padding(.top, 6)
+        .padding(.top, 4)
 
         todaySummaryCard
         weatherSelector
 
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
           HStack {
-            Text("한 줄 메모").font(.headline)
+            Text("한 줄 메모").font(.subheadline).fontWeight(.semibold)
             Spacer()
             Text("\(vm.todayEntriesCount)/3")
-              .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+              .font(.caption2).fontWeight(.bold).foregroundStyle(.tertiary)
           }
           TextField(vm.notePrompt, text: $vm.note, axis: .vertical)
             .lineLimit(1...5)
-            .padding(.vertical, 14).padding(.horizontal, 16)
+            .padding(.vertical, 13).padding(.horizontal, 15)
             .moodieInsetSurface(
               cornerRadius: vm.controlCornerRadius,
               tint: vm.accentColor(for: vm.selectedWeather),
               isActive: !vm.trimmedNote.isEmpty
             )
-            .frame(minHeight: 52)
+            .frame(minHeight: 48)
         }
         saveButtonView
         if vm.showSaveConfirmation {

@@ -8,10 +8,11 @@ extension ContentView {
         ZStack {
           MoodieBackground(colors: vm.backgroundColors())
           ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
               Text("설정")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .padding(.top, 6)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
 
               VStack(spacing: 10) {
                 settingsCategoryRow(
@@ -39,9 +40,11 @@ extension ContentView {
                   subtitle: "백업 내보내기와 초기화를 관리해요"
                 )
               }
+
+              settingsAppInfoFooter
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 28)
           }
         }
         .navigationDestination(for: SettingsRoute.self) { route in
@@ -57,18 +60,33 @@ extension ContentView {
       subtitle: String
     ) -> some View {
       NavigationLink(value: route) {
-        HStack(spacing: 15) {
+        HStack(spacing: 14) {
           MoodieIconBadge(systemName: icon, color: vm.moodieTint)
           VStack(alignment: .leading, spacing: 3) {
-            Text(title).fontWeight(.semibold).foregroundStyle(.primary)
+            Text(title).font(.subheadline).fontWeight(.semibold).foregroundStyle(.primary)
             Text(subtitle).font(.caption).foregroundStyle(.secondary)
           }
           Spacer()
-          Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+          Image(systemName: "chevron.right")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.tertiary)
         }
         .moodieCard(cornerRadius: vm.controlCornerRadius)
       }
       .buttonStyle(.plain)
+    }
+
+    var settingsAppInfoFooter: some View {
+      VStack(spacing: 6) {
+        Text("Moodie Sky")
+          .font(.system(.caption, design: .rounded, weight: .semibold))
+          .foregroundStyle(.secondary)
+        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+          .font(.caption2)
+          .foregroundStyle(.tertiary)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.top, 20)
     }
 
     @ViewBuilder
@@ -105,14 +123,15 @@ extension ContentView {
       ZStack {
         MoodieBackground(colors: vm.backgroundColors())
         ScrollView {
-          VStack(alignment: .leading, spacing: 14) {
+          VStack(alignment: .leading, spacing: 16) {
             content()
           }
-          .padding()
+          .padding(.horizontal, 16)
+          .padding(.vertical, 12)
         }
       }
       .navigationTitle(title)
-      .navigationBarTitleDisplayMode(.inline)
+      .navigationBarTitleDisplayMode(.large)
     }
     var generalSettingsCard: some View {
       VStack(alignment: .leading, spacing: 14) {
@@ -195,11 +214,11 @@ extension ContentView {
       } label: {
         HStack(spacing: 12) {
           Image(systemName: icon)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(vm.moodieTint)
-            .frame(width: 24, height: 24)
+            .frame(width: 22)
 
-          VStack(alignment: .leading, spacing: 3) {
+          VStack(alignment: .leading, spacing: 2) {
             Text(title)
               .font(.subheadline)
               .fontWeight(.semibold)
@@ -210,23 +229,23 @@ extension ContentView {
               .fixedSize(horizontal: false, vertical: true)
           }
 
-          Spacer(minLength: 12)
+          Spacer(minLength: 10)
 
-          HStack(spacing: 6) {
+          HStack(spacing: 5) {
             Text(currentValue)
               .font(.subheadline)
-              .fontWeight(.semibold)
-              .foregroundStyle(.primary)
+              .fontWeight(.medium)
+              .foregroundStyle(.secondary)
               .lineLimit(1)
               .minimumScaleFactor(0.82)
             Image(systemName: "chevron.up.chevron.down")
               .font(.caption2)
               .fontWeight(.bold)
-              .foregroundStyle(.tertiary)
+              .foregroundStyle(.quaternary)
           }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 13)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .moodieInsetSurface(cornerRadius: 14, tint: vm.moodieTint)
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

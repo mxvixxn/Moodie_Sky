@@ -28,20 +28,26 @@ extension ContentView {
     }
 
     func reportCard(_ report: MoodReport) -> some View {
-      VStack(alignment: .leading, spacing: 10) {
-        HStack(spacing: 10) {
-          Text(report.emoji).font(.system(size: 34))
-            .frame(width: 48, height: 48).background(.white.opacity(0.12)).clipShape(Circle())
-          VStack(alignment: .leading, spacing: 4) {
-            Text(report.title).font(.headline)
+      VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 12) {
+          Text(report.emoji).font(.system(size: 32))
+            .frame(width: 46, height: 46)
+            .background(.white.opacity(0.10))
+            .clipShape(Circle())
+          VStack(alignment: .leading, spacing: 3) {
+            Text(report.title)
+              .font(.subheadline)
+              .fontWeight(.bold)
             Text(report.headline)
               .font(.subheadline)
-              .fontWeight(.semibold)
+              .fontWeight(.medium)
+              .foregroundStyle(.secondary)
               .fixedSize(horizontal: false, vertical: true)
               .lineLimit(2)
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }
+
         Text(report.detail)
           .font(.subheadline)
           .foregroundStyle(.secondary)
@@ -50,19 +56,19 @@ extension ContentView {
         Text(report.insight)
           .font(.caption)
           .foregroundStyle(.secondary)
-          .padding(.horizontal, 10)
-          .padding(.vertical, 8)
+          .padding(.horizontal, 11)
+          .padding(.vertical, 9)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .moodieInsetSurface(cornerRadius: 12, tint: vm.moodieTint)
+          .moodieInsetSurface(cornerRadius: 11, tint: vm.moodieTint)
 
         Text(report.comparison)
           .font(.caption)
           .fontWeight(.semibold)
           .foregroundStyle(vm.moodieTint)
-          .padding(.horizontal, 10)
-          .padding(.vertical, 8)
+          .padding(.horizontal, 11)
+          .padding(.vertical, 9)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .moodieInsetSurface(cornerRadius: 12, tint: vm.moodieTint, isActive: true)
+          .moodieInsetSurface(cornerRadius: 11, tint: vm.moodieTint, isActive: true)
 
         HStack(spacing: 8) {
           reportStat(title: "기록", value: "\(report.entriesCount)")

@@ -75,18 +75,20 @@ extension ContentView {
     }
 
     var diarySearchControls: some View {
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 10) {
           Image(systemName: "magnifyingglass")
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.secondary)
           TextField("메모, 날씨, 날짜 검색", text: $diarySearchText)
+            .font(.subheadline)
             .textInputAutocapitalization(.never)
             .disableAutocorrection(true)
           if !diarySearchText.isEmpty {
             Button { diarySearchText = "" } label: {
               Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(.secondary)
+                .font(.system(size: 14))
+                .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
           }
@@ -163,51 +165,46 @@ extension ContentView {
     }
 
     var calendarContent: some View {
-      VStack(spacing: 15) {
+      VStack(spacing: 14) {
         HStack {
           Button(action: {
             vm.changeMonth(-1)
             vm.triggerHaptic(.soft)
           }) {
-            ZStack {
-              RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.clear)
-              Image(systemName: "chevron.left").fontWeight(.semibold)
-            }
-            .frame(width: 44, height: 44)
-            .moodieInsetSurface(cornerRadius: 12, tint: vm.moodieTint)
+            Image(systemName: "chevron.left")
+              .font(.system(size: 14, weight: .semibold))
+              .frame(width: 38, height: 38)
+              .moodieInsetSurface(cornerRadius: 11, tint: vm.moodieTint)
           }.buttonStyle(.plain)
 
           Spacer()
-          Text(vm.monthTitle(vm.displayedMonth)).font(.headline).id(vm.displayedMonth)
+          Text(vm.monthTitle(vm.displayedMonth))
+            .font(.subheadline)
+            .fontWeight(.bold)
+            .id(vm.displayedMonth)
           Spacer()
 
           Button(action: {
             vm.changeMonth(1)
             vm.triggerHaptic(.soft)
           }) {
-            ZStack {
-              RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.clear)
-              Image(systemName: "chevron.right").fontWeight(.semibold)
-            }
-            .frame(width: 44, height: 44)
-            .moodieInsetSurface(cornerRadius: 12, tint: vm.moodieTint)
+            Image(systemName: "chevron.right")
+              .font(.system(size: 14, weight: .semibold))
+              .frame(width: 38, height: 38)
+              .moodieInsetSurface(cornerRadius: 11, tint: vm.moodieTint)
           }.buttonStyle(.plain)
         }
-        .padding(.horizontal).padding(.vertical, 4)
-        .moodieInsetSurface(cornerRadius: vm.controlCornerRadius, tint: vm.moodieTint)
 
         HStack {
           ForEach(vm.daysOfWeek, id: \.self) { day in
             Text(day)
-              .font(.caption2).fontWeight(.black)
+              .font(.caption2).fontWeight(.bold)
               .foregroundStyle(vm.weekdayColor(day))
               .frame(maxWidth: .infinity)
           }
-        }.padding(.horizontal, 5)
+        }.padding(.horizontal, 4)
 
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8)
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6)
         {
           ForEach(vm.calendarDays(for: vm.displayedMonth), id: \.id) { day in
             if let date = day.date {
@@ -219,7 +216,7 @@ extension ContentView {
                   }
                 }
             } else {
-              Color.clear.frame(height: 85)
+              Color.clear.frame(height: 80)
             }
           }
         }
@@ -234,23 +231,23 @@ extension ContentView {
 
       return VStack(spacing: 0) {
         Text("\(Calendar.current.component(.day, from: date))")
-          .font(.system(size: 13, weight: isSelected ? .black : .bold))
+          .font(.system(size: 12, weight: isSelected ? .black : .bold))
           .foregroundStyle(isToday ? vm.moodieTint : Color.primary)
-          .padding(.top, 8)
+          .padding(.top, 7)
         Spacer(minLength: 0)
         emojiAdaptiveLayout(entries: dayEntries)
         Spacer(minLength: 0)
       }
-      .frame(height: 85).frame(maxWidth: .infinity)
+      .frame(height: 80).frame(maxWidth: .infinity)
       .moodieInsetSurface(
-        cornerRadius: 14,
+        cornerRadius: 12,
         tint: isToday ? vm.moodieTint : vm.accentColor(for: vm.selectedWeather),
         isActive: isSelected || isToday
       )
-      .scaleEffect(isSelected ? 1.035 : 1)
+      .scaleEffect(isSelected ? 1.03 : 1)
       .shadow(
-        color: isSelected ? vm.accentColor(for: vm.selectedWeather).opacity(0.16) : .clear,
-        radius: 10, x: 0, y: 5
+        color: isSelected ? vm.accentColor(for: vm.selectedWeather).opacity(0.12) : .clear,
+        radius: 8, x: 0, y: 3
       )
       .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isSelected)
     }

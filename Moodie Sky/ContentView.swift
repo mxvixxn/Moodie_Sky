@@ -51,10 +51,10 @@
           }
           .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
           .shadow(
-            color: colorScheme == .dark ? Color.black.opacity(0.12) : Color.black.opacity(0.025),
-            radius: colorScheme == .dark ? 12 : 8,
+            color: colorScheme == .dark ? Color.black.opacity(0.10) : Color.black.opacity(0.03),
+            radius: colorScheme == .dark ? 8 : 6,
             x: 0,
-            y: colorScheme == .dark ? 6 : 3
+            y: colorScheme == .dark ? 4 : 2
           )
       }
     }
@@ -102,8 +102,8 @@
           .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
               .stroke(
-                isActive ? tint.opacity(colorScheme == .dark ? 0.38 : 0.30) : Color.clear,
-                lineWidth: isActive ? 1.2 : 0
+                isActive ? tint.opacity(colorScheme == .dark ? 0.32 : 0.22) : Color.clear,
+                lineWidth: isActive ? 1 : 0
               )
           )
       }
