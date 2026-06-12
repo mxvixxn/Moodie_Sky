@@ -234,6 +234,8 @@ final class MoodViewModel: ObservableObject {
   @Published var passcodeLockoutDuration: TimeInterval
   @Published var obscuresAppSwitcher: Bool
   @Published var latestRecoveryKey = ""
+  @Published var showErrorAlert = false
+  @Published var errorAlertMessage = ""
   @Published var showSaveConfirmation = false
   @Published var saveConfirmationText = "오늘의 마음 하늘에 저장했어요"
   @Published var lastSavedEntryID: UUID?
@@ -338,6 +340,11 @@ final class MoodViewModel: ObservableObject {
     return fallback
   }
 
+  private func presentError(_ message: String) {
+    errorAlertMessage = message
+    showErrorAlert = true
+  }
+
   // MARK: - 상수
   let weathers = [("맑음", "☀️"), ("구름", "☁️"), ("비", "🌧️"), ("폭풍", "⛈️"), ("무지개", "🌈")]
   let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -404,6 +411,8 @@ final class MoodViewModel: ObservableObject {
   private let backupReminderDaysKey = "moodie_backup_reminder_days"
   private let lastBackupExportedAtKey = "moodie_last_backup_exported_at"
   private let preferredStartTabKey = "moodie_preferred_start_tab"
+  private let startTabMigrationKey = "did_migrate_moodie_start_tab_for_flow"
+  private let streakBrokenShownDayKey = "moodie_streak_broken_shown_day"
   private let dateDisplayStyleKey = "moodie_date_display_style"
   private let appThemeKey = "moodie_app_theme"
   private let defaultWeatherKey = "moodie_default_weather"
@@ -460,14 +469,15 @@ final class MoodViewModel: ObservableObject {
     return "암호 입력이 잠시 잠겼어요. \(seconds)초 뒤 다시 시도해주세요."
   }
   var todaySummaryTitle: String {
-    guard let latest = todayEntries.first else { return "아직 오늘의 하늘은 비어 있어요" }
-    return "오늘은 \(weatherStartPhrase(for: latest.weather)) 시작했어요"
+    // entries는 최신순이라 오늘의 첫 기록은 last
+    guard let firstToday = todayEntries.last else { return "아직 오늘의 하늘은 비어 있어요" }
+    return "오늘은 \(weatherStartPhrase(for: firstToday.weather)) 시작했어요"
   }
   var todaySummaryDetail: String {
     guard !todayEntries.isEmpty else { return "날씨 하나와 한 줄 메모로 오늘을 가볍게 시작해봐요." }
     return "남은 기록 \(remainingTodaySlots)개 · 오늘도 천천히 이어가요"
   }
-  var todaySummaryEmoji: String { todayEntries.first?.emoji ?? selectedEmoji }
+  var todaySummaryEmoji: String { todayEntries.last?.emoji ?? selectedEmoji }
   var dataSummaryText: String {
     guard let firstDate = entries.map(\.date).min() else { return "아직 저장된 기록이 없어요." }
     return "총 \(entries.count)개 · 첫 기록 \(formattedDate(firstDate))"
@@ -513,9 +523,15 @@ final class MoodViewModel: ObservableObject {
     backupReminderEnabled = defaults.object(forKey: backupReminderEnabledKey) as? Bool ?? true
     backupReminderDays = defaults.object(forKey: backupReminderDaysKey) as? Int ?? 14
     lastBackupExportedAt = defaults.object(forKey: lastBackupExportedAtKey) as? Date
-    let storedStartTab = defaults.integer(forKey: preferredStartTabKey)
-    let migratedStartTab = storedStartTab == 2 ? AppStartTab.settings : AppStartTab(rawValue: storedStartTab)
-    preferredStartTab = migratedStartTab ?? .record
+    // 흐름 탭 추가 전에는 설정 탭이 rawValue 2였음 — 매 실행마다 이전하면
+    // 새로 고른 흐름(2)이 설정으로 바뀌므로 반드시 한 번만 이전해야 함
+    if !defaults.bool(forKey: startTabMigrationKey) {
+      if defaults.integer(forKey: preferredStartTabKey) == 2 {
+        defaults.set(AppStartTab.settings.rawValue, forKey: preferredStartTabKey)
+      }
+      defaults.set(true, forKey: startTabMigrationKey)
+    }
+    preferredStartTab = AppStartTab(rawValue: defaults.integer(forKey: preferredStartTabKey)) ?? .record
     dateDisplayStyle = MoodDateDisplayStyle(
       rawValue: defaults.string(forKey: dateDisplayStyleKey) ?? "korean") ?? .korean
     appTheme = MoodAppTheme(rawValue: defaults.string(forKey: appThemeKey) ?? "system") ?? .system
@@ -630,6 +646,7 @@ final class MoodViewModel: ObservableObject {
 
   func deleteConfirmed() {
     guard let entry = entryToDelete else { return }
+    entryToDelete = nil
     withAnimation { entries.removeAll { $0.id == entry.id } }
     modelContext?.delete(entry)
     pendingDeleteIDs.append(entry.id)
@@ -769,9 +786,14 @@ final class MoodViewModel: ObservableObject {
   }
 
   /// 오늘 앱을 열었을 때 streak이 끊겼는지 확인. 끊겼으면 alert 띄움.
+  /// 앱이 활성화될 때마다 불리므로, 같은 날에는 한 번만 보여줌.
   func checkStreakBrokenOnOpen() {
     let cal = Calendar.current
     let todayStart = cal.startOfDay(for: Date())
+    let defaults = UserDefaults.standard
+    if let shownDay = defaults.object(forKey: streakBrokenShownDayKey) as? Date,
+      cal.isDate(shownDay, inSameDayAs: todayStart)
+    { return }
     let datesWithEntry = Set(entries.map { cal.startOfDay(for: $0.date) })
     guard !datesWithEntry.isEmpty else { return }
 
@@ -789,6 +811,7 @@ final class MoodViewModel: ObservableObject {
     let brokenStreak = calculateStreak(from: yesterday)
     guard brokenStreak > 0 else { return }
 
+    defaults.set(todayStart, forKey: streakBrokenShownDayKey)
     streakBrokenPreviousStreak = brokenStreak
     shouldShowStreakBrokenAlert = true
   }
@@ -808,19 +831,6 @@ final class MoodViewModel: ObservableObject {
     entries.filter {
       Calendar.current.isDate($0.date, equalTo: date, toGranularity: .month)
     }
-  }
-
-  func monthlySummary(for date: Date) -> (emoji: String, title: String) {
-    let monthEntries = entriesForMonth(date)
-    guard !monthEntries.isEmpty else {
-      return ("☁️", "아직 이번 달 마음 하늘은 비어 있어요")
-    }
-    let grouped = Dictionary(grouping: monthEntries, by: { $0.weather })
-    let mostFrequent = grouped.max { $0.value.count < $1.value.count }
-    let weather = mostFrequent?.key ?? "구름"
-    let emoji = weathers.first { $0.0 == weather }?.1 ?? "☁️"
-    let particle = ["비", "무지개"].contains(weather) ? "가" : "이"
-    return (emoji, "\(weather)\(particle) 가장 많았어요")
   }
 
   func weeklyReport(for date: Date) -> MoodReport {
@@ -1248,7 +1258,7 @@ final class MoodViewModel: ObservableObject {
         if let error {
           self.isReminderEnabled = false
           UserDefaults.standard.set(false, forKey: self.reminderEnabledKey)
-          self.syncStatus = .failed(
+          self.presentError(
             self.userFacingMessage(
               for: error,
               fallback: "알림 설정을 완료하지 못했어요. 잠시 후 다시 시도해주세요."
@@ -1259,7 +1269,7 @@ final class MoodViewModel: ObservableObject {
         guard granted else {
           self.isReminderEnabled = false
           UserDefaults.standard.set(false, forKey: self.reminderEnabledKey)
-          self.syncStatus = .failed("알림 권한이 꺼져 있어요. 설정 앱에서 허용할 수 있어요.")
+          self.presentError("알림 권한이 꺼져 있어요. 설정 앱에서 허용할 수 있어요.")
           return
         }
 
@@ -1303,11 +1313,12 @@ final class MoodViewModel: ObservableObject {
       center.add(request) { [weak self] error in
         if let error {
           DispatchQueue.main.async {
-            self?.syncStatus = .failed(
-              self?.userFacingMessage(
+            guard let self else { return }
+            self.presentError(
+              self.userFacingMessage(
                 for: error,
                 fallback: "알림 예약을 완료하지 못했어요. 알림 설정을 다시 확인해주세요."
-              ) ?? "알림 예약을 완료하지 못했어요. 알림 설정을 다시 확인해주세요."
+              )
             )
           }
         }
@@ -1320,11 +1331,18 @@ final class MoodViewModel: ObservableObject {
     guard backupReminderEnabled else { return }
     let calendar = Calendar.current
     let last = lastBackupExportedAt ?? entries.map(\.date).min() ?? Date()
-    guard let fireDate = calendar.date(byAdding: .day, value: backupReminderDays, to: last), fireDate > Date() else { return }
-
+    let dueDate = calendar.date(byAdding: .day, value: backupReminderDays, to: last) ?? Date()
+    // 백업 주기가 이미 지났을수록 알림이 더 필요하므로, 과거면 가장 가까운 미래의 오전 10시로 예약
+    var fireDate = max(dueDate, Date())
     var components = calendar.dateComponents([.year, .month, .day], from: fireDate)
     components.hour = 10
     components.minute = 0
+    if let candidate = calendar.date(from: components), candidate <= Date() {
+      fireDate = calendar.date(byAdding: .day, value: 1, to: fireDate) ?? fireDate
+      components = calendar.dateComponents([.year, .month, .day], from: fireDate)
+      components.hour = 10
+      components.minute = 0
+    }
 
     let content = UNMutableNotificationContent()
     content.title = "Moodie Sky"
@@ -1350,6 +1368,8 @@ final class MoodViewModel: ObservableObject {
     let calendar = Calendar.current
     let start = calendar.component(.hour, from: quietHoursStart)
     let end = calendar.component(.hour, from: quietHoursEnd)
+    // 시작과 끝이 같으면 24시간 전체가 막혀 알림이 전부 사라지므로 조용한 시간 없음으로 처리
+    guard start != end else { return false }
     if start < end { return hour >= start && hour < end }
     return hour >= start || hour < end
   }
@@ -1607,10 +1627,6 @@ final class MoodViewModel: ObservableObject {
       authErrorMessage = ""
     }
     self.backgroundEnteredAt = nil
-  }
-
-  func lockIfNeeded() {
-    noteAppDidEnterBackground()
   }
 
   func unlockWithBiometricsIfAvailable() {
@@ -1889,7 +1905,7 @@ final class MoodViewModel: ObservableObject {
       )
     } catch {
       let message = userFacingMessage(for: error, fallback: "백업 파일을 확인하지 못했어요.")
-      syncStatus = .failed("백업 미리보기 실패: \(message)")
+      presentError("백업 미리보기 실패: \(message)")
       return nil
     }
   }
@@ -1898,10 +1914,9 @@ final class MoodViewModel: ObservableObject {
     do {
       let importedEntries = try loadBackupEntries(from: url, backupPassword: backupPassword)
       mergeImportedEntries(importedEntries)
-      syncStatus = .synced(Date())
     } catch {
       let message = userFacingMessage(for: error, fallback: "백업 파일을 가져오지 못했어요.")
-      syncStatus = .failed("백업 가져오기 실패: \(message)")
+      presentError("백업 가져오기 실패: \(message)")
     }
   }
 
@@ -1974,7 +1989,11 @@ final class MoodViewModel: ObservableObject {
     }
     let rows = parseCSV(text)
     guard let header = rows.first else { throw BackupImportError.missingRequiredFields }
-    let index = Dictionary(uniqueKeysWithValues: header.enumerated().map { ($0.element, $0.offset) })
+    // 외부 파일이라 헤더 이름이 중복될 수 있음 — uniqueKeysWithValues는 중복 시 크래시
+    let index = Dictionary(
+      header.enumerated().map { ($0.element, $0.offset) },
+      uniquingKeysWith: { first, _ in first }
+    )
     guard index["id"] != nil, index["date"] != nil else {
       throw BackupImportError.missingRequiredFields
     }
@@ -2033,13 +2052,9 @@ final class MoodViewModel: ObservableObject {
     }
   }
 
-  private func cleanupBackupExport(at url: URL?) {
+  func cleanupBackupExportFile(at url: URL?) {
     guard let url, url.path.hasPrefix(FileManager.default.temporaryDirectory.path) else { return }
     try? FileManager.default.removeItem(at: url)
-  }
-
-  func cleanupBackupExportFile(at url: URL?) {
-    cleanupBackupExport(at: url)
   }
 
   private func value(in row: [String], at index: Int?) -> String? {
@@ -2300,7 +2315,7 @@ final class MoodViewModel: ObservableObject {
     do {
       try modelContext.save()
     } catch {
-      syncStatus = .failed("저장하지 못했어요. 잠시 후 다시 시도해주세요.")
+      presentError("저장하지 못했어요. 잠시 후 다시 시도해주세요.")
     }
   }
 
@@ -2313,7 +2328,7 @@ final class MoodViewModel: ObservableObject {
     do {
       entries = try modelContext.fetch(descriptor)
     } catch {
-      syncStatus = .failed("기록을 불러오지 못했어요. 앱을 다시 열어 확인해주세요.")
+      presentError("기록을 불러오지 못했어요. 앱을 다시 열어 확인해주세요.")
     }
   }
 
@@ -2337,7 +2352,7 @@ final class MoodViewModel: ObservableObject {
       try modelContext.save()
       UserDefaults.standard.set(true, forKey: swiftDataMigrationKey)
     } catch {
-      syncStatus = .failed("기존 기록을 이전하지 못했어요. 앱을 다시 열어 확인해주세요.")
+      presentError("기존 기록을 이전하지 못했어요. 앱을 다시 열어 확인해주세요.")
     }
   }
 
@@ -2368,6 +2383,7 @@ final class MoodViewModel: ObservableObject {
         storedEntry.weather = entry.weather
         storedEntry.emoji = entry.emoji
         storedEntry.note = entry.note
+        storedEntry.intensity = entry.intensity
         storedEntry.updatedAt = entry.updatedAt
         storedEntry.needsSync = entry.needsSync
         storedEntry.cloudRecordName = entry.cloudRecordName

@@ -486,6 +486,11 @@
           Button("삭제", role: .destructive) { vm.deleteConfirmed() }
           Button("취소", role: .cancel) {}
         }
+        .alert("문제가 생겼어요", isPresented: $vm.showErrorAlert) {
+          Button("확인", role: .cancel) {}
+        } message: {
+          Text(vm.errorAlertMessage)
+        }
         .alert("모든 기록을 지울까요?", isPresented: $vm.showAllDeleteAlert) {
           Button("백업 먼저") {
             pendingDeleteAfterBackup = true

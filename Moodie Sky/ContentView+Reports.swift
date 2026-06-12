@@ -23,7 +23,7 @@ extension ContentView {
     var reportDashboard: some View {
       VStack(spacing: 12) {
         reportCard(vm.weeklyReport(for: Date()))
-        reportCard(vm.monthlyReport(for: vm.displayedMonth))
+        reportCard(vm.monthlyReport(for: Date()))
       }
     }
 
@@ -86,25 +86,5 @@ extension ContentView {
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(12)
       .moodieInsetSurface(cornerRadius: 14, tint: Color(red: 0.28, green: 0.48, blue: 0.58))
-    }
-
-    // MARK: - 월간 요약 카드
-    var monthlySummaryCard: some View {
-      let monthEntries = vm.entriesForMonth(vm.displayedMonth)
-      let summary = vm.monthlySummary(for: vm.displayedMonth)
-
-      return VStack(alignment: .leading, spacing: 10) {
-        Text("이번 달 마음 하늘").font(.headline)
-        HStack(spacing: 12) {
-          Text(summary.emoji).font(.system(size: 34))
-            .frame(width: 54, height: 54).background(.white.opacity(0.14)).clipShape(Circle())
-          VStack(alignment: .leading, spacing: 4) {
-            Text(summary.title).fontWeight(.bold)
-            Text("\(monthEntries.count)번의 마음 날씨를 남겼어요").font(.caption).foregroundStyle(.secondary)
-          }
-          Spacer()
-        }
-      }
-      .moodieCard(cornerRadius: vm.cardCornerRadius)
     }
 }

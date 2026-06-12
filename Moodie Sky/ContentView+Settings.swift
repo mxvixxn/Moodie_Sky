@@ -964,6 +964,8 @@ extension ContentView {
       }
 
       pendingBackupImportURL = url
+      // 이전 가져오기에서 남은 암호를 재사용하면 암호 입력 화면이 생략된 채 조용히 실패함
+      pendingBackupImportPassword = nil
       backupImportAuthPasscode = ""
       vm.refreshPasscodeLockout()
       guard !vm.isPasscodeTemporarilyLocked else {

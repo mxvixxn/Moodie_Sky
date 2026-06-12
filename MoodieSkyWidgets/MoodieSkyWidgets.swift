@@ -1,55 +1,7 @@
 import WidgetKit
 import SwiftUI
 
-// MARK: - 공유 데이터 읽기 (앱의 WidgetDataProvider와 같은 구조)
-
-enum MoodieWidgetData {
-  static let suiteName = "group.com.mxvixxn.Moodie-Sky"
-
-  static let streakKey = "widget_current_streak"
-  static let longestStreakKey = "widget_longest_streak"
-  static let weeklyEntriesKey = "widget_weekly_entries"
-  static let monthlyRecordedDaysKey = "widget_monthly_recorded_days"
-  static let currentMonthKey = "widget_current_month"
-  static let totalEntriesKey = "widget_total_entries"
-  static let lastUpdateKey = "widget_last_update"
-
-  static var shared: UserDefaults? {
-    UserDefaults(suiteName: suiteName)
-  }
-
-  struct WeeklyEntry: Codable {
-    let emoji: String
-    let weather: String
-    let note: String
-    let date: Date
-    let dayOfWeek: Int
-  }
-
-  static func readStreak() -> (current: Int, longest: Int) {
-    guard let defaults = shared else { return (0, 0) }
-    return (defaults.integer(forKey: streakKey), defaults.integer(forKey: longestStreakKey))
-  }
-
-  static func readWeeklyEntries() -> [WeeklyEntry] {
-    guard let defaults = shared,
-          let data = defaults.data(forKey: weeklyEntriesKey),
-          let entries = try? JSONDecoder().decode([WeeklyEntry].self, from: data)
-    else { return [] }
-    return entries
-  }
-
-  static func readMonthlyRecordedDays() -> (days: [Int], monthString: String) {
-    guard let defaults = shared else { return ([], "") }
-    let days = defaults.array(forKey: monthlyRecordedDaysKey) as? [Int] ?? []
-    let month = defaults.string(forKey: currentMonthKey) ?? ""
-    return (days, month)
-  }
-
-  static func readTotalEntries() -> Int {
-    shared?.integer(forKey: totalEntriesKey) ?? 0
-  }
-}
+// MoodieWidgetData는 앱 타깃의 WidgetDataProvider.swift를 양쪽 타깃에서 공유
 
 // MARK: - Timeline Provider
 
@@ -93,9 +45,15 @@ struct MoodieTimelineProvider: TimelineProvider {
     let monthly = MoodieWidgetData.readMonthlyRecordedDays()
     let total = MoodieWidgetData.readTotalEntries()
 
+    // streak 값은 앱이 마지막으로 실행된 시점 기준 —
+    // 그 뒤 기록이 끊겼다면(오늘/어제 기록 없음) 계속 이어지는 것처럼 보이면 안 됨
+    let cal = Calendar.current
+    let lastEntryDate = weekly.map(\.date).max()
+    let isStreakAlive = lastEntryDate.map { cal.isDateInToday($0) || cal.isDateInYesterday($0) } ?? false
+
     return MoodieTimelineEntry(
       date: Date(),
-      currentStreak: streak.current,
+      currentStreak: isStreakAlive ? streak.current : 0,
       longestStreak: streak.longest,
       weeklyEntries: weekly,
       monthlyRecordedDays: monthly.days,
@@ -130,26 +88,26 @@ struct QuickEntryWidgetView: View {
   let entry: MoodieTimelineEntry
 
   var body: some View {
-    Link(destination: URL(string: "moodiesky://record")!) {
-      VStack(spacing: 8) {
-        Spacer()
+    VStack(spacing: 8) {
+      Spacer()
 
-        Image(systemName: "plus.circle.fill")
-          .font(.system(size: 36, weight: .medium))
-          .foregroundStyle(moodieTint)
+      Image(systemName: "plus.circle.fill")
+        .font(.system(size: 36, weight: .medium))
+        .foregroundStyle(moodieTint)
 
-        Text("마음 날씨 기록")
-          .font(.system(.caption, design: .rounded, weight: .bold))
-          .foregroundStyle(.primary)
+      Text("마음 날씨 기록")
+        .font(.system(.caption, design: .rounded, weight: .bold))
+        .foregroundStyle(.primary)
 
-        Text("탭해서 시작")
-          .font(.caption2)
-          .foregroundStyle(.secondary)
+      Text("탭해서 시작")
+        .font(.caption2)
+        .foregroundStyle(.secondary)
 
-        Spacer()
-      }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      Spacer()
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // systemSmall에서는 Link가 동작하지 않아 widgetURL로 딥링크를 걸어야 함
+    .widgetURL(URL(string: "moodiesky://record"))
   }
 }
 
@@ -247,6 +205,13 @@ struct DiaryWidget: Widget {
 struct DiaryWidgetView: View {
   let entry: MoodieTimelineEntry
 
+  // 저장된 기록 날짜는 앱이 마지막으로 실행된 달 기준 —
+  // 달이 바뀐 뒤 앱을 열지 않았다면 지난달 기록을 이번 달 칸에 그리면 안 됨
+  private var isMonthDataCurrent: Bool {
+    let comps = Calendar.current.dateComponents([.year, .month], from: entry.date)
+    return entry.monthString == "\(comps.year ?? 0)-\(comps.month ?? 0)"
+  }
+
   private var calendarDays: [Int?] {
     let cal = Calendar.current
     let today = entry.date
@@ -313,7 +278,7 @@ struct DiaryWidgetView: View {
       LazyVGrid(columns: columns, spacing: 4) {
         ForEach(Array(calendarDays.enumerated()), id: \.offset) { _, day in
           if let d = day {
-            let hasRecord = entry.monthlyRecordedDays.contains(d)
+            let hasRecord = isMonthDataCurrent && entry.monthlyRecordedDays.contains(d)
             let isToday = d == todayDay
 
             ZStack {
@@ -345,14 +310,16 @@ struct DiaryWidgetView: View {
 
       Spacer(minLength: 0)
 
-      // 하단 주간 요약 스트립
-      if !entry.weeklyEntries.isEmpty {
+      // 하단 주간 요약 스트립 (저장 후 시간이 지나 7일 밖으로 밀려난 기록은 제외)
+      let weekStart = Calendar.current.date(byAdding: .day, value: -6, to: Calendar.current.startOfDay(for: entry.date)) ?? entry.date
+      let recentWeekly = entry.weeklyEntries.filter { $0.date >= weekStart }
+      if !recentWeekly.isEmpty {
         HStack(spacing: 4) {
           Text("이번 주")
             .font(.system(.caption2, design: .rounded, weight: .semibold))
             .foregroundStyle(.secondary)
           Spacer()
-          ForEach(entry.weeklyEntries.suffix(7), id: \.date) { e in
+          ForEach(recentWeekly.suffix(7), id: \.date) { e in
             Text(e.emoji).font(.system(size: 14))
           }
         }

@@ -57,6 +57,13 @@
 			);
 			target = B1000020300000000000001 /* MoodieSkyWidgets */;
 		};
+		B2000003300000000000001 /* Exceptions for "Moodie Sky" folder in "MoodieSkyWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				WidgetDataProvider.swift,
+			);
+			target = B1000020300000000000001 /* MoodieSkyWidgets */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -64,6 +71,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				B2000001300000000000001 /* Exceptions for "Moodie Sky" folder in "Moodie Sky" target */,
+				B2000003300000000000001 /* Exceptions for "Moodie Sky" folder in "MoodieSkyWidgets" target */,
 			);
 			path = "Moodie Sky";
 			sourceTree = "<group>";
