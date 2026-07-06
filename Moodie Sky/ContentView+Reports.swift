@@ -17,14 +17,59 @@ extension ContentView {
         .navigationTitle("흐름")
         .navigationBarTitleDisplayMode(.large)
       }
+      .task {
+        await vm.refreshMindfulMinutes()
+      }
     }
 
     // MARK: - 리포트 카드
     var reportDashboard: some View {
       VStack(spacing: 12) {
+        if vm.isHealthKitMindfulnessEnabled {
+          mindfulnessCard
+        }
         reportCard(vm.weeklyReport(for: Date()))
         reportCard(vm.monthlyReport(for: vm.displayedMonth))
       }
+    }
+
+    // MARK: - 마음챙김 연동 카드 (Fitie)
+    var mindfulnessCard: some View {
+      let insight = vm.mindfulnessCorrelationInsight(
+        mindfulDays: vm.weeklyMindfulDays, entries: vm.entriesForWeek(Date()))
+
+      return VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 12) {
+          Text("🧘").font(.system(size: 32))
+            .frame(width: 46, height: 46)
+            .background(.white.opacity(0.10))
+            .clipShape(Circle())
+          VStack(alignment: .leading, spacing: 3) {
+            Text("이번 주 마음챙김").font(.subheadline).fontWeight(.bold)
+            Text("Fitie와 함께 보낸 시간이에요")
+              .font(.subheadline)
+              .fontWeight(.medium)
+              .foregroundStyle(.secondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        HStack(spacing: 8) {
+          reportStat(title: "마음챙김 분", value: "\(Int(vm.weeklyMindfulMinutes.rounded()))")
+          reportStat(title: "함께한 날", value: "\(vm.weeklyMindfulDays.count)")
+        }
+
+        if let insight {
+          Text(insight)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .moodieInsetSurface(cornerRadius: 11, tint: vm.moodieTint)
+        }
+      }
+      .moodieCard(cornerRadius: vm.cardCornerRadius)
     }
 
     func reportCard(_ report: MoodReport) -> some View {

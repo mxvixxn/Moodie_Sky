@@ -1,6 +1,7 @@
 import CloudKit
 import Combine
 import CryptoKit
+import HealthKit
 import LocalAuthentication
 import Security
 import SwiftData
@@ -237,6 +238,16 @@ final class MoodViewModel: ObservableObject {
   @Published var showSaveConfirmation = false
   @Published var saveConfirmationText = "오늘의 마음 하늘에 저장했어요"
   @Published var lastSavedEntryID: UUID?
+  @Published var lastSavedWeather: String?
+
+  // MARK: - 마음챙김 연동 (HealthKit / Fitie)
+  @Published var isHealthKitMindfulnessEnabled: Bool
+  @Published var suggestsMindfulBreakAfterToughEntry: Bool
+  @Published var isMindfulSuggestionDismissed = false
+  @Published var weeklyMindfulMinutes: Double = 0
+  @Published var monthlyMindfulMinutes: Double = 0
+  @Published var weeklyMindfulDays: Set<Date> = []
+  @Published var monthlyMindfulDays: Set<Date> = []
 
   // MARK: - Streak
   @Published var shouldShowStreakBrokenAlert = false
@@ -417,6 +428,8 @@ final class MoodViewModel: ObservableObject {
   private let passcodeLockoutUntilKey = "moodie_passcode_lockout_until"
   private let passcodeLockoutDurationKey = "moodie_passcode_lockout_duration"
   private let obscureAppSwitcherKey = "moodie_obscure_app_switcher"
+  private let healthKitMindfulnessEnabledKey = "moodie_healthkit_mindfulness_enabled"
+  private let suggestsMindfulBreakKey = "moodie_suggests_mindful_break"
   private let reminderNotificationID = "daily_moodie_sky_reminder"
   private var reminderNotificationIDs: [String] {
     (1...14).map { "\(reminderNotificationID)_rolling_\($0)" }
@@ -520,6 +533,9 @@ final class MoodViewModel: ObservableObject {
       rawValue: defaults.string(forKey: dateDisplayStyleKey) ?? "korean") ?? .korean
     appTheme = MoodAppTheme(rawValue: defaults.string(forKey: appThemeKey) ?? "system") ?? .system
     defaultWeather = defaults.string(forKey: defaultWeatherKey) ?? "맑음"
+    isHealthKitMindfulnessEnabled = defaults.bool(forKey: healthKitMindfulnessEnabledKey)
+    suggestsMindfulBreakAfterToughEntry =
+      defaults.object(forKey: suggestsMindfulBreakKey) as? Bool ?? true
 
     passcodeDigitCount = defaults.object(forKey: passcodeDigitCountKey) as? Int ?? 4
     lockGraceInterval = defaults.object(forKey: lockGraceIntervalKey) as? TimeInterval ?? 60
@@ -567,6 +583,11 @@ final class MoodViewModel: ObservableObject {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
       self?.checkStreakBrokenOnOpen()
     }
+    if isHealthKitMindfulnessEnabled {
+      Task { [weak self] in
+        await self?.refreshMindfulMinutes()
+      }
+    }
   }
 
   private func scheduleDailyReminderAfterStartupIfNeeded() {
@@ -593,6 +614,8 @@ final class MoodViewModel: ObservableObject {
     withAnimation {
       entries.insert(newEntry, at: 0)
       lastSavedEntryID = newEntry.id
+      lastSavedWeather = newEntry.weather
+      isMindfulSuggestionDismissed = false
       note = ""
       todayPrompt = prompts.randomElement() ?? prompts[0]
       notePrompt = notePrompts.randomElement() ?? notePrompts[0]
@@ -605,6 +628,9 @@ final class MoodViewModel: ObservableObject {
       self?.hideKeyboard()
     }
     if isReminderEnabled { scheduleDailyReminder() }
+    if isHealthKitMindfulnessEnabled {
+      MoodieHealthKitManager.shared.recordStateOfMind(weather: newEntry.weather, date: newEntry.date)
+    }
     syncWithICloud()
     updateWidgetData()
   }
@@ -619,6 +645,128 @@ final class MoodViewModel: ObservableObject {
         self.showSaveConfirmation = false
         self.lastSavedEntryID = nil
       }
+    }
+  }
+
+  // MARK: - 마음챙김 연동 (HealthKit / Fitie)
+
+  func setHealthKitMindfulnessEnabled(_ enabled: Bool) {
+    if enabled {
+      Task { [weak self] in
+        let granted = await MoodieHealthKitManager.shared.requestAuthorization()
+        guard let self else { return }
+        self.isHealthKitMindfulnessEnabled = granted
+        UserDefaults.standard.set(granted, forKey: self.healthKitMindfulnessEnabledKey)
+        if granted { await self.refreshMindfulMinutes() }
+      }
+    } else {
+      isHealthKitMindfulnessEnabled = false
+      UserDefaults.standard.set(false, forKey: healthKitMindfulnessEnabledKey)
+      weeklyMindfulMinutes = 0
+      monthlyMindfulMinutes = 0
+      weeklyMindfulDays = []
+      monthlyMindfulDays = []
+    }
+  }
+
+  func setSuggestsMindfulBreak(_ enabled: Bool) {
+    suggestsMindfulBreakAfterToughEntry = enabled
+    UserDefaults.standard.set(enabled, forKey: suggestsMindfulBreakKey)
+  }
+
+  func refreshMindfulMinutes() async {
+    guard isHealthKitMindfulnessEnabled else { return }
+    let now = Date()
+    let calendar = Calendar.current
+    let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+    let monthStart = calendar.dateInterval(of: .month, for: now)?.start ?? now
+
+    let weeklySeconds = await MoodieHealthKitManager.shared.fetchMindfulMinutes(from: weekStart, to: now)
+    let monthlySeconds = await MoodieHealthKitManager.shared.fetchMindfulMinutes(from: monthStart, to: now)
+    let weeklyDays = await MoodieHealthKitManager.shared.mindfulDays(from: weekStart, to: now)
+    let monthlyDays = await MoodieHealthKitManager.shared.mindfulDays(from: monthStart, to: now)
+
+    weeklyMindfulMinutes = weeklySeconds / 60
+    monthlyMindfulMinutes = monthlySeconds / 60
+    weeklyMindfulDays = weeklyDays
+    monthlyMindfulDays = monthlyDays
+  }
+
+  /// 마음챙김을 한 날과 하지 않은 날의 마음 날씨를 비교해서 인사이트 문장을 만들어요.
+  func mindfulnessCorrelationInsight(mindfulDays: Set<Date>, entries: [MoodEntry]) -> String? {
+    guard isHealthKitMindfulnessEnabled, !mindfulDays.isEmpty else { return nil }
+    let calendar = Calendar.current
+    let upliftingWeathers: Set<String> = ["맑음", "무지개"]
+
+    let mindfulEntries = entries.filter { mindfulDays.contains(calendar.startOfDay(for: $0.date)) }
+    let otherEntries = entries.filter { !mindfulDays.contains(calendar.startOfDay(for: $0.date)) }
+    guard !mindfulEntries.isEmpty, !otherEntries.isEmpty else { return nil }
+
+    let mindfulUpliftRatio =
+      Double(mindfulEntries.filter { upliftingWeathers.contains($0.weather) }.count)
+      / Double(mindfulEntries.count)
+    let otherUpliftRatio =
+      Double(otherEntries.filter { upliftingWeathers.contains($0.weather) }.count)
+      / Double(otherEntries.count)
+    guard otherUpliftRatio > 0, mindfulUpliftRatio > otherUpliftRatio else { return nil }
+
+    let percent = Int((mindfulUpliftRatio * 100).rounded())
+    return "Fitie에서 마음챙김을 한 날은 맑음·무지개 비율이 \(percent)%였어요"
+  }
+
+  /// 힘든 날씨(비, 폭풍)를 기록한 직후 Fitie 호흡 세션을 제안할지 여부
+  var shouldSuggestMindfulBreak: Bool {
+    guard suggestsMindfulBreakAfterToughEntry, !isMindfulSuggestionDismissed else { return false }
+    guard let lastSavedWeather, ["비", "폭풍"].contains(lastSavedWeather) else { return false }
+    return canOpenFitie
+  }
+
+  var canOpenFitie: Bool {
+    guard let url = URL(string: "fitie://breathe") else { return false }
+    return UIApplication.shared.canOpenURL(url)
+  }
+
+  func dismissMindfulSuggestion() {
+    isMindfulSuggestionDismissed = true
+  }
+
+  func openFitieMindfulSession() {
+    var components = URLComponents()
+    components.scheme = "fitie"
+    components.host = "breathe"
+    components.queryItems = [
+      URLQueryItem(name: "source", value: "moodiesky"),
+      URLQueryItem(name: "duration", value: "3"),
+      URLQueryItem(name: "mood", value: lastSavedWeather ?? ""),
+    ]
+    guard let url = components.url, UIApplication.shared.canOpenURL(url) else { return }
+    UIApplication.shared.open(url)
+    isMindfulSuggestionDismissed = true
+  }
+
+  /// Fitie 등에서 `moodiesky://record?...`로 들어온 딥링크를 오늘 기록에 반영
+  func applyIncomingDeepLink(url: URL) {
+    guard
+      let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+      let queryItems = components.queryItems
+    else { return }
+
+    let values = Dictionary(
+      uniqueKeysWithValues: queryItems.compactMap { item in
+        item.value.map { (item.name, $0) }
+      })
+
+    if let weather = values["weather"], weathers.contains(where: { $0.0 == weather }) {
+      selectedWeather = weather
+      selectedEmoji = Self.emoji(for: weather)
+    }
+
+    guard values["source"] == "fitie", trimmedNote.isEmpty else { return }
+    let session = values["session"] ?? "호흡"
+    if let duration = values["duration"] {
+      note = "Fitie에서 \(duration)분 \(session) 후 🧘"
+    } else {
+      note = "Fitie에서 \(session) 후 🧘"
     }
   }
 
@@ -802,6 +950,11 @@ final class MoodViewModel: ObservableObject {
     entries
       .filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
       .sorted { $0.date < $1.date }
+  }
+
+  func entriesForWeek(_ date: Date) -> [MoodEntry] {
+    guard let interval = Calendar.current.dateInterval(of: .weekOfYear, for: date) else { return [] }
+    return entries.filter { interval.contains($0.date) }
   }
 
   func entriesForMonth(_ date: Date) -> [MoodEntry] {

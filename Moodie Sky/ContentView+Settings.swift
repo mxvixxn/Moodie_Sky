@@ -39,6 +39,12 @@ extension ContentView {
                   title: "데이터 관리",
                   subtitle: "백업 내보내기와 초기화를 관리해요"
                 )
+                settingsCategoryRow(
+                  route: .mindfulness,
+                  icon: "wind",
+                  title: "마음챙김 연동",
+                  subtitle: vm.isHealthKitMindfulnessEnabled ? "Fitie 연동 켜짐" : "Fitie 연동 꺼짐"
+                )
               }
 
               settingsAppInfoFooter
@@ -113,6 +119,62 @@ extension ContentView {
           dataImportButton
           dataDeleteButton
         }
+      case .mindfulness:
+        settingsDetailContainer(title: "마음챙김 연동") {
+          mindfulnessSettingsCard
+        }
+      }
+    }
+
+    var mindfulnessSettingsCard: some View {
+      VStack(alignment: .leading, spacing: 14) {
+        Label("Fitie 연동", systemImage: "wind").fontWeight(.semibold)
+
+        Toggle(
+          isOn: Binding(
+            get: { vm.isHealthKitMindfulnessEnabled },
+            set: { vm.setHealthKitMindfulnessEnabled($0) }
+          )
+        ) {
+          VStack(alignment: .leading, spacing: 3) {
+            Text("건강 데이터로 연결하기").fontWeight(.semibold)
+            Text("오늘의 마음 날씨를 건강 앱의 마음 상태로 저장하고, Fitie에서 기록한 마음챙김 시간을 리포트에 함께 보여줘요.")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+        .tint(vm.moodieTint)
+
+        Divider().opacity(0.45)
+
+        Toggle(
+          isOn: Binding(
+            get: { vm.suggestsMindfulBreakAfterToughEntry },
+            set: { vm.setSuggestsMindfulBreak($0) }
+          )
+        ) {
+          VStack(alignment: .leading, spacing: 3) {
+            Text("힘든 날엔 호흡 제안받기").fontWeight(.semibold)
+            Text("비, 폭풍을 기록한 직후 Fitie의 짧은 호흡 세션을 제안해요. Fitie 앱이 설치되어 있어야 해요.")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+        .tint(vm.moodieTint)
+
+        if vm.isHealthKitMindfulnessEnabled {
+          Divider().opacity(0.45)
+          HStack(spacing: 8) {
+            reportStat(title: "이번 주 마음챙김 분", value: "\(Int(vm.weeklyMindfulMinutes.rounded()))")
+            reportStat(title: "이번 달 마음챙김 분", value: "\(Int(vm.monthlyMindfulMinutes.rounded()))")
+          }
+        }
+      }
+      .moodieCard(cornerRadius: vm.controlCornerRadius)
+      .task {
+        await vm.refreshMindfulMinutes()
       }
     }
 

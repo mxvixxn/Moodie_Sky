@@ -391,6 +391,38 @@ extension ContentView {
         .moodieInsetSurface(cornerRadius: 14, tint: vm.moodieTint, isActive: true)
     }
 
+    var mindfulBreakSuggestionView: some View {
+      HStack(spacing: 10) {
+        Image(systemName: "wind")
+          .foregroundStyle(vm.moodieTint)
+        VStack(alignment: .leading, spacing: 2) {
+          Text("잠깐 숨을 고르고 올까요?")
+            .font(.caption)
+            .fontWeight(.semibold)
+          Text("Fitie에서 짧은 호흡 세션을 열어드려요")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+        Spacer()
+        Button("열기") { vm.openFitieMindfulSession() }
+          .font(.caption)
+          .fontWeight(.semibold)
+          .buttonStyle(.plain)
+          .foregroundStyle(vm.moodieTint)
+        Button {
+          vm.dismissMindfulSuggestion()
+        } label: {
+          Image(systemName: "xmark")
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+      }
+      .padding(.horizontal, 14)
+      .padding(.vertical, 10)
+      .moodieInsetSurface(cornerRadius: 14, tint: vm.moodieTint)
+    }
+
     var saveButtonView: some View {
       let canSubmit = vm.canSubmitEntry
 

@@ -157,6 +157,7 @@
       case notifications
       case security
       case data
+      case mindfulness
     }
 
     // MARK: - 데이터 모델
@@ -427,9 +428,9 @@
         rootTabView
         .animation(.easeInOut(duration: 0.22), value: selection)
         .onOpenURL { url in
-          if url.scheme == "moodiesky" && url.host == "record" {
-            selection = 0
-          }
+          guard url.scheme == "moodiesky", url.host == "record" else { return }
+          selection = 0
+          vm.applyIncomingDeepLink(url: url)
         }
         .onChange(of: selection) { _, _ in vm.triggerHaptic(.medium) }
         .onAppear {

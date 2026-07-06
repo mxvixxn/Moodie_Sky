@@ -138,6 +138,10 @@ extension ContentView {
           saveConfirmationView
             .transition(.move(edge: .top).combined(with: .opacity))
         }
+        if vm.shouldSuggestMindfulBreak {
+          mindfulBreakSuggestionView
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
       }
     }
 }
