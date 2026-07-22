@@ -6,34 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		B1000011300000000000001 /* MoodieSkyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1000002300000000000001 /* MoodieSkyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-/* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		B1000010300000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A25134552FA83A4E00A86B9B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B1000020300000000000001;
-			remoteInfo = MoodieSkyWidgets;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		A2E3AB0C2FA8CB4A005CA7E0 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				B1000011300000000000001 /* MoodieSkyWidgets.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		A251345D2FA83A4E00A86B9B /* Moodie Sky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Moodie Sky.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2E3AAF92FA8CB49005CA7E0 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -53,7 +25,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				MoodieSkyWidgets.entitlements,
 			);
 			target = B1000020300000000000001 /* MoodieSkyWidgets */;
 		};
@@ -142,12 +113,10 @@
 				A25134592FA83A4E00A86B9B /* Sources */,
 				A251345A2FA83A4E00A86B9B /* Frameworks */,
 				A251345B2FA83A4E00A86B9B /* Resources */,
-				A2E3AB0C2FA8CB4A005CA7E0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				B1000012300000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A251345F2FA83A4E00A86B9B /* Moodie Sky */,
@@ -252,14 +221,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		B1000012300000000000001 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B1000020300000000000001 /* MoodieSkyWidgets */;
-			targetProxy = B1000010300000000000001 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A25134662FA83A4E00A86B9B /* Debug */ = {

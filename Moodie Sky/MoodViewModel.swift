@@ -1,8 +1,5 @@
-import CloudKit
 import Combine
 import CryptoKit
-import LocalAuthentication
-import Security
 import SwiftData
 import SwiftUI
 @preconcurrency import UserNotifications
@@ -25,18 +22,6 @@ struct MoodBackupPayload: Codable {
   let exportedAt: Date
   let entries: [MoodEntry]
 }
-
-private struct PendingPasscodeSetup {
-  let passcodeHash: String
-  let passcodeSalt: String
-  let digitCount: Int
-  let recoveryKey: String
-  let previousPasscodeHash: String?
-  let previousPasscodeSalt: String?
-  let previousRecoveryKeyHash: String?
-  let previousRecoveryKeySalt: String?
-}
-
 
 enum AppStartTab: Int, CaseIterable, Identifiable {
   case record = 0
@@ -222,18 +207,7 @@ final class MoodViewModel: ObservableObject {
   @Published var dateDisplayStyle: MoodDateDisplayStyle
   @Published var appTheme: MoodAppTheme
   @Published var defaultWeather: String
-  @Published var isAppLockEnabled: Bool
-  @Published var isFaceIDEnabled: Bool
-  @Published var passcodeDigitCount: Int
-  @Published var lockGraceInterval: TimeInterval
-  @Published var lockPasscodeInput = ""
-  @Published var isUnlocked = false
-  @Published var authErrorMessage = ""
-  @Published var failedPasscodeAttempts: Int
-  @Published var passcodeLockoutUntil: Date?
-  @Published var passcodeLockoutDuration: TimeInterval
   @Published var obscuresAppSwitcher: Bool
-  @Published var latestRecoveryKey = ""
   @Published var showErrorAlert = false
   @Published var errorAlertMessage = ""
   @Published var showSaveConfirmation = false
@@ -369,17 +343,6 @@ final class MoodViewModel: ObservableObject {
     "기분의 색을 하나 골라둘 시간이에요.",
   ]
 
-  let lockGraceOptions: [(label: String, seconds: TimeInterval)] = [
-    ("즉시 다시 잠금", 0),
-    ("30초 동안 열림 유지", 30),
-    ("1분 동안 열림 유지", 60),
-    ("5분 동안 열림 유지", 300),
-  ]
-  let passcodeLockoutOptions: [(label: String, seconds: TimeInterval)] = [
-    ("30초 동안 입력 차단", 30),
-    ("1분 동안 입력 차단", 60),
-    ("5분 동안 입력 차단", 300),
-  ]
   let saveMessages = [
     "오늘의 마음 하늘에 저장했어요",
     "나중의 나에게 조용히 남겨둘게요",
@@ -416,15 +379,6 @@ final class MoodViewModel: ObservableObject {
   private let dateDisplayStyleKey = "moodie_date_display_style"
   private let appThemeKey = "moodie_app_theme"
   private let defaultWeatherKey = "moodie_default_weather"
-  private let appLockEnabledKey = "is_moodie_app_lock_enabled"
-  private let faceIDEnabledKey = "is_moodie_face_id_enabled"
-  private let passcodeHashKey = "moodie_passcode_hash"
-  private let passcodeSaltKey = "moodie_passcode_salt"
-  private let passcodeDigitCountKey = "moodie_passcode_digit_count"
-  private let lockGraceIntervalKey = "moodie_lock_grace_interval"
-  private let failedPasscodeAttemptsKey = "moodie_failed_passcode_attempts"
-  private let passcodeLockoutUntilKey = "moodie_passcode_lockout_until"
-  private let passcodeLockoutDurationKey = "moodie_passcode_lockout_duration"
   private let obscureAppSwitcherKey = "moodie_obscure_app_switcher"
   private let reminderNotificationID = "daily_moodie_sky_reminder"
   private var reminderNotificationIDs: [String] {
@@ -432,19 +386,11 @@ final class MoodViewModel: ObservableObject {
       + (1...7).map { "\(reminderNotificationID)_weekday_\($0)" }
       + ["\(reminderNotificationID)_backup"]
   }
-  private let maxPasscodeAttempts = 5
   private let maxBackupImportBytes = 10 * 1024 * 1024
   private let maxBackupImportEntries = 5000
   private let maxImportedNoteCharacters = 2000
   private let earliestAllowedBackupDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2000, month: 1, day: 1)) ?? .distantPast
-  private static let passcodeKeychainService = "com.mxvixxn.Moodie-Sky.passcode"
-  private static let passcodeHashAccount = "passcode_hash"
-  private static let passcodeSaltAccount = "passcode_salt"
-  private static let recoveryKeyHashAccount = "recovery_key_hash"
-  private static let recoveryKeySaltAccount = "recovery_key_salt"
   private var pendingDeleteIDs: [UUID] = []
-  private var pendingPasscodeSetup: PendingPasscodeSetup?
-  private var backgroundEnteredAt: Date?
   private var modelContext: ModelContext?
 
   // MARK: - 계산 프로퍼티
@@ -456,18 +402,6 @@ final class MoodViewModel: ObservableObject {
   var canSaveToday: Bool { todayEntriesCount < 3 }
   var trimmedNote: String { note.trimmingCharacters(in: .whitespacesAndNewlines) }
   var canSubmitEntry: Bool { canSaveToday && !trimmedNote.isEmpty }
-  var hasPasscode: Bool { Self.keychainString(account: Self.passcodeHashAccount) != nil }
-  var hasRecoveryKey: Bool { Self.keychainString(account: Self.recoveryKeyHashAccount) != nil }
-  var shouldShowLockScreen: Bool { isAppLockEnabled && !isUnlocked }
-  var isPasscodeTemporarilyLocked: Bool {
-    guard let passcodeLockoutUntil else { return false }
-    return passcodeLockoutUntil > Date()
-  }
-  var passcodeLockoutMessage: String? {
-    guard let passcodeLockoutUntil, passcodeLockoutUntil > Date() else { return nil }
-    let seconds = max(1, Int(ceil(passcodeLockoutUntil.timeIntervalSinceNow)))
-    return "암호 입력이 잠시 잠겼어요. \(seconds)초 뒤 다시 시도해주세요."
-  }
   var todaySummaryTitle: String {
     // entries는 최신순이라 오늘의 첫 기록은 last
     guard let firstToday = todayEntries.last else { return "아직 오늘의 하늘은 비어 있어요" }
@@ -536,17 +470,7 @@ final class MoodViewModel: ObservableObject {
       rawValue: defaults.string(forKey: dateDisplayStyleKey) ?? "korean") ?? .korean
     appTheme = MoodAppTheme(rawValue: defaults.string(forKey: appThemeKey) ?? "system") ?? .system
     defaultWeather = defaults.string(forKey: defaultWeatherKey) ?? "맑음"
-
-    passcodeDigitCount = defaults.object(forKey: passcodeDigitCountKey) as? Int ?? 4
-    lockGraceInterval = defaults.object(forKey: lockGraceIntervalKey) as? TimeInterval ?? 60
-    passcodeLockoutDuration = defaults.object(forKey: passcodeLockoutDurationKey) as? TimeInterval ?? 60
     obscuresAppSwitcher = defaults.object(forKey: obscureAppSwitcherKey) as? Bool ?? true
-    Self.migrateLegacyPasscodeIfNeeded(defaults: defaults)
-    let hasStoredPasscode = Self.keychainString(account: Self.passcodeHashAccount) != nil
-    failedPasscodeAttempts = defaults.integer(forKey: failedPasscodeAttemptsKey)
-    passcodeLockoutUntil = defaults.object(forKey: passcodeLockoutUntilKey) as? Date
-    isAppLockEnabled = hasStoredPasscode
-    isFaceIDEnabled = hasStoredPasscode && defaults.bool(forKey: faceIDEnabledKey)
 
     var components = DateComponents()
     components.hour = defaults.object(forKey: reminderHourKey) as? Int ?? 21
@@ -569,7 +493,6 @@ final class MoodViewModel: ObservableObject {
 
     todayPrompt = prompts.randomElement() ?? prompts[0]
     notePrompt = notePrompts.randomElement() ?? notePrompts[0]
-    refreshPasscodeLockout()
   }
 
   func configure(modelContext: ModelContext) {
@@ -1148,10 +1071,6 @@ final class MoodViewModel: ObservableObject {
     UserDefaults.standard.set(true, forKey: "hasSeenMoodieTutorial")
   }
 
-  func limitedDigits(_ value: String, count: Int) -> String {
-    String(value.filter { $0.isNumber }.prefix(count))
-  }
-
   // MARK: - 일반 설정
   func setPreferredStartTab(_ tab: AppStartTab) {
     preferredStartTab = tab
@@ -1406,378 +1325,14 @@ final class MoodViewModel: ObservableObject {
     )
   }
 
-  // MARK: - 잠금
-  func updateLockGraceInterval(_ interval: TimeInterval) {
-    guard lockGraceOptions.contains(where: { $0.seconds == interval }) else { return }
-    lockGraceInterval = interval
-    UserDefaults.standard.set(interval, forKey: lockGraceIntervalKey)
-  }
-
-  func updatePasscodeLockoutDuration(_ duration: TimeInterval) {
-    guard passcodeLockoutOptions.contains(where: { $0.seconds == duration }) else { return }
-    passcodeLockoutDuration = duration
-    UserDefaults.standard.set(duration, forKey: passcodeLockoutDurationKey)
-  }
-
+  // MARK: - 개인정보 보호
   func setObscuresAppSwitcher(_ isEnabled: Bool) {
     obscuresAppSwitcher = isEnabled
     UserDefaults.standard.set(isEnabled, forKey: obscureAppSwitcherKey)
   }
 
-  func updatePasscodeDigitCount(_ digitCount: Int) {
-    guard digitCount == 4 || digitCount == 6 else { return }
-    passcodeDigitCount = digitCount
-    UserDefaults.standard.set(digitCount, forKey: passcodeDigitCountKey)
-  }
-
-  func setPasscode(_ passcode: String, confirmation: String, digitCount: Int) -> Bool {
-    let trimmedPasscode = passcode.trimmingCharacters(in: .whitespacesAndNewlines)
-    let trimmedConfirmation = confirmation.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard digitCount == 4 || digitCount == 6 else { return false }
-    guard trimmedPasscode.count == digitCount,
-      trimmedPasscode.allSatisfy(\.isNumber)
-    else {
-      authErrorMessage = "\(digitCount)자리 숫자 암호를 입력해주세요."
-      return false
-    }
-    guard trimmedPasscode == trimmedConfirmation else {
-      authErrorMessage = "암호가 서로 달라요. 다시 확인해주세요."
-      return false
-    }
-
-    let salt = UUID().uuidString
-    let recoveryKey = makeRecoveryKey()
-    authErrorMessage = ""
-    pendingPasscodeSetup = PendingPasscodeSetup(
-      passcodeHash: hashPasscode(trimmedPasscode, salt: salt),
-      passcodeSalt: salt,
-      digitCount: digitCount,
-      recoveryKey: recoveryKey,
-      previousPasscodeHash: Self.keychainString(account: Self.passcodeHashAccount),
-      previousPasscodeSalt: Self.keychainString(account: Self.passcodeSaltAccount),
-      previousRecoveryKeyHash: Self.keychainString(account: Self.recoveryKeyHashAccount),
-      previousRecoveryKeySalt: Self.keychainString(account: Self.recoveryKeySaltAccount)
-    )
-    latestRecoveryKey = recoveryKey
-    return true
-  }
-
-  func confirmLatestRecoveryKey(_ recoveryKey: String) -> Bool {
-    guard let pendingPasscodeSetup else {
-      authErrorMessage = "확인할 복구키가 없어요. 앱 암호를 다시 설정해주세요."
-      return false
-    }
-    guard normalizedRecoveryKey(recoveryKey) == normalizedRecoveryKey(pendingPasscodeSetup.recoveryKey) else {
-      authErrorMessage = "복구키가 맞지 않아요. 저장한 키를 다시 확인해주세요."
-      return false
-    }
-
-    let recoverySalt = UUID().uuidString
-    let savedPasscode = Self.setKeychainString(pendingPasscodeSetup.passcodeSalt, account: Self.passcodeSaltAccount)
-      && Self.setKeychainString(pendingPasscodeSetup.passcodeHash, account: Self.passcodeHashAccount)
-    let savedRecoveryKey = Self.setKeychainString(recoverySalt, account: Self.recoveryKeySaltAccount)
-      && Self.setKeychainString(
-        hashRecoveryKey(pendingPasscodeSetup.recoveryKey, salt: recoverySalt),
-        account: Self.recoveryKeyHashAccount
-      )
-
-    guard savedPasscode && savedRecoveryKey else {
-      restoreKeychainString(pendingPasscodeSetup.previousPasscodeHash, account: Self.passcodeHashAccount)
-      restoreKeychainString(pendingPasscodeSetup.previousPasscodeSalt, account: Self.passcodeSaltAccount)
-      restoreKeychainString(pendingPasscodeSetup.previousRecoveryKeyHash, account: Self.recoveryKeyHashAccount)
-      restoreKeychainString(pendingPasscodeSetup.previousRecoveryKeySalt, account: Self.recoveryKeySaltAccount)
-      authErrorMessage = "암호와 복구키를 안전하게 저장하지 못했어요. 다시 시도해주세요."
-      return false
-    }
-
-    UserDefaults.standard.removeObject(forKey: passcodeHashKey)
-    UserDefaults.standard.removeObject(forKey: passcodeSaltKey)
-    UserDefaults.standard.set(pendingPasscodeSetup.digitCount, forKey: passcodeDigitCountKey)
-    UserDefaults.standard.set(true, forKey: appLockEnabledKey)
-    passcodeDigitCount = pendingPasscodeSetup.digitCount
-    isAppLockEnabled = true
-    isUnlocked = true
-    lockPasscodeInput = ""
-    resetPasscodeFailures()
-    authErrorMessage = ""
-    self.pendingPasscodeSetup = nil
-    latestRecoveryKey = ""
-    return true
-  }
-
-  func cancelPendingPasscodeSetup() {
-    pendingPasscodeSetup = nil
-    latestRecoveryKey = ""
-    authErrorMessage = ""
-  }
-
-  private func restoreKeychainString(_ value: String?, account: String) {
-    if let value {
-      _ = Self.setKeychainString(value, account: account)
-    } else {
-      Self.deleteKeychainItem(account: account)
-    }
-  }
-
-  func removePasscode() {
-    Self.deleteKeychainItem(account: Self.passcodeHashAccount)
-    Self.deleteKeychainItem(account: Self.passcodeSaltAccount)
-    Self.deleteKeychainItem(account: Self.recoveryKeyHashAccount)
-    Self.deleteKeychainItem(account: Self.recoveryKeySaltAccount)
-    UserDefaults.standard.removeObject(forKey: passcodeHashKey)
-    UserDefaults.standard.removeObject(forKey: passcodeSaltKey)
-    UserDefaults.standard.set(false, forKey: appLockEnabledKey)
-    UserDefaults.standard.set(false, forKey: faceIDEnabledKey)
-    resetPasscodeFailures()
-    isAppLockEnabled = false
-    isFaceIDEnabled = false
-    isUnlocked = false
-    lockPasscodeInput = ""
-    authErrorMessage = ""
-    latestRecoveryKey = ""
-    pendingPasscodeSetup = nil
-  }
-
-  func resetPasscodeWithRecoveryKey(
-    _ recoveryKey: String,
-    newPasscode: String,
-    confirmation: String,
-    digitCount: Int
-  ) -> Bool {
-    guard hasRecoveryKey else {
-      authErrorMessage = "저장된 복구키가 없어요. 기록 삭제 후 초기화가 필요해요."
-      return false
-    }
-    guard verifyRecoveryKey(recoveryKey) else {
-      registerFailedPasscodeAttempt()
-      return false
-    }
-    resetPasscodeFailures()
-    return setPasscode(newPasscode, confirmation: confirmation, digitCount: digitCount)
-  }
-
-  func resetLocalDataAndSecurity() {
-    entries.forEach { modelContext?.delete($0) }
-    withAnimation { entries.removeAll() }
-    pendingDeleteIDs.removeAll()
-    selectedEntry = nil
-    entryToEdit = nil
-    entryToDelete = nil
-    showDeleteAlert = false
-    showAllDeleteAlert = false
-    note = ""
-    lockPasscodeInput = ""
-    pendingPasscodeSetup = nil
-
-    Self.deleteKeychainItem(account: Self.passcodeHashAccount)
-    Self.deleteKeychainItem(account: Self.passcodeSaltAccount)
-    Self.deleteKeychainItem(account: Self.recoveryKeyHashAccount)
-    Self.deleteKeychainItem(account: Self.recoveryKeySaltAccount)
-
-    UserDefaults.standard.removeObject(forKey: passcodeHashKey)
-    UserDefaults.standard.removeObject(forKey: passcodeSaltKey)
-    UserDefaults.standard.removeObject(forKey: pendingDeleteIDsKey)
-    UserDefaults.standard.removeObject(forKey: failedPasscodeAttemptsKey)
-    UserDefaults.standard.removeObject(forKey: passcodeLockoutUntilKey)
-    UserDefaults.standard.set(false, forKey: appLockEnabledKey)
-    UserDefaults.standard.set(false, forKey: faceIDEnabledKey)
-
-    resetPasscodeFailures()
-    isAppLockEnabled = false
-    isFaceIDEnabled = false
-    isUnlocked = true
-    authErrorMessage = ""
-    latestRecoveryKey = ""
-    syncStatus = .idle
-    saveEntries()
-    UINotificationFeedbackGenerator().notificationOccurred(.success)
-  }
-
-  func setFaceIDEnabled(_ isEnabled: Bool) {
-    guard hasPasscode else {
-      isFaceIDEnabled = false
-      authErrorMessage = "먼저 앱 암호를 만들어주세요."
-      return
-    }
-    if isEnabled {
-      authenticateWithBiometrics { [weak self] success in
-        guard let self else { return }
-        self.isFaceIDEnabled = success
-        UserDefaults.standard.set(success, forKey: self.faceIDEnabledKey)
-      }
-    } else {
-      isFaceIDEnabled = false
-      UserDefaults.standard.set(false, forKey: faceIDEnabledKey)
-    }
-  }
-
-  func noteAppDidEnterBackground() {
-    guard isAppLockEnabled else { return }
-    backgroundEnteredAt = Date()
-  }
-
-  func handleAppDidBecomeActive() {
-    checkStreakBrokenOnOpen()
-    guard isAppLockEnabled else { return }
-    guard let backgroundEnteredAt else { return }
-    if Date().timeIntervalSince(backgroundEnteredAt) >= lockGraceInterval {
-      isUnlocked = false
-      lockPasscodeInput = ""
-      authErrorMessage = ""
-    }
-    self.backgroundEnteredAt = nil
-  }
-
-  func unlockWithBiometricsIfAvailable() {
-    guard shouldShowLockScreen, isFaceIDEnabled else { return }
-    authenticateWithBiometrics { [weak self] success in
-      guard let self, success else { return }
-      self.isUnlocked = true
-      self.lockPasscodeInput = ""
-    }
-  }
-
-  func unlockWithPasscode() {
-    guard validatePasscodeForProtectedAction(lockPasscodeInput) else {
-      lockPasscodeInput = ""
-      triggerIntenseErrorHaptic()
-      return
-    }
-    isUnlocked = true
-    lockPasscodeInput = ""
-    authErrorMessage = ""
-    UINotificationFeedbackGenerator().notificationOccurred(.success)
-  }
-
-  func appendLockPasscodeDigit(_ digit: String) {
-    refreshPasscodeLockout()
-    guard !isPasscodeTemporarilyLocked else {
-      authErrorMessage = passcodeLockoutMessage ?? "암호 입력이 잠시 잠겼어요."
-      return
-    }
-    guard digit.count == 1,
-      digit.allSatisfy(\.isNumber),
-      lockPasscodeInput.count < passcodeDigitCount
-    else { return }
-
-    lockPasscodeInput.append(digit)
-    triggerHaptic(.light)
-    authErrorMessage = ""
-
-    if lockPasscodeInput.count == passcodeDigitCount {
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
-        self?.unlockWithPasscode()
-      }
-    }
-  }
-
-  func deleteLockPasscodeDigit() {
-    guard !lockPasscodeInput.isEmpty else { return }
-    lockPasscodeInput.removeLast()
-    triggerHaptic(.soft)
-  }
-
-  func refreshPasscodeLockout() {
-    guard let passcodeLockoutUntil else { return }
-    if passcodeLockoutUntil <= Date() {
-      resetPasscodeFailures()
-    }
-  }
-
-  func validatePasscodeForProtectedAction(_ passcode: String) -> Bool {
-    refreshPasscodeLockout()
-    guard !isPasscodeTemporarilyLocked else {
-      authErrorMessage = passcodeLockoutMessage ?? "암호 입력이 잠시 잠겼어요."
-      return false
-    }
-    guard verifyPasscode(passcode) else {
-      registerFailedPasscodeAttempt()
-      return false
-    }
-    resetPasscodeFailures()
-    authErrorMessage = ""
-    return true
-  }
-
-  private func registerFailedPasscodeAttempt() {
-    failedPasscodeAttempts += 1
-    UserDefaults.standard.set(failedPasscodeAttempts, forKey: failedPasscodeAttemptsKey)
-
-    if failedPasscodeAttempts >= maxPasscodeAttempts {
-      let until = Date().addingTimeInterval(passcodeLockoutDuration)
-      passcodeLockoutUntil = until
-      UserDefaults.standard.set(until, forKey: passcodeLockoutUntilKey)
-      authErrorMessage = passcodeLockoutMessage ?? "암호 입력이 잠시 잠겼어요."
-    } else {
-      let remaining = maxPasscodeAttempts - failedPasscodeAttempts
-      authErrorMessage = "암호가 맞지 않아요. 남은 시도 \(remaining)번."
-    }
-  }
-
-  private func resetPasscodeFailures() {
-    failedPasscodeAttempts = 0
-    passcodeLockoutUntil = nil
-    UserDefaults.standard.removeObject(forKey: failedPasscodeAttemptsKey)
-    UserDefaults.standard.removeObject(forKey: passcodeLockoutUntilKey)
-  }
-
-  func authenticateProtectedActionWithBiometrics(completion: @escaping (Bool) -> Void) {
-    guard hasPasscode else {
-      authErrorMessage = "먼저 앱 암호를 만들어주세요."
-      completion(false)
-      return
-    }
-    refreshPasscodeLockout()
-    guard !isPasscodeTemporarilyLocked else {
-      authErrorMessage = passcodeLockoutMessage ?? "암호 입력이 잠시 잠겼어요."
-      completion(false)
-      return
-    }
-    authenticateWithBiometrics { success in
-      completion(success)
-    }
-  }
-
-  func prepareBackupExport(passcode: String, format: BackupExportFormat, backupPassword: String? = nil) -> URL? {
-    guard hasPasscode else {
-      authErrorMessage = "백업을 내보내려면 먼저 앱 암호를 만들어주세요."
-      return nil
-    }
-    guard validatePasscodeForProtectedAction(passcode) else { return nil }
-    return makeBackupFileURL(format: format, backupPassword: backupPassword)
-  }
-
-  func prepareAuthenticatedBackupExport(format: BackupExportFormat, backupPassword: String? = nil) -> URL? {
-    makeBackupFileURL(format: format, backupPassword: backupPassword)
-  }
-
-  func prepareBackupExportWithBiometrics(
-    format: BackupExportFormat,
-    backupPassword: String? = nil,
-    completion: @escaping (URL?) -> Void
-  ) {
-    guard hasPasscode else {
-      authErrorMessage = "백업을 내보내려면 먼저 앱 암호를 만들어주세요."
-      completion(nil)
-      return
-    }
-    refreshPasscodeLockout()
-    guard !isPasscodeTemporarilyLocked else {
-      authErrorMessage = passcodeLockoutMessage ?? "암호 입력이 잠시 잠겼어요."
-      completion(nil)
-      return
-    }
-    authenticateWithBiometrics { [weak self] success in
-      guard let self, success else {
-        completion(nil)
-        return
-      }
-      completion(self.makeBackupFileURL(format: format, backupPassword: backupPassword))
-    }
-  }
-
-  private func makeBackupFileURL(format: BackupExportFormat, backupPassword: String? = nil) -> URL? {
+  // MARK: - 백업 내보내기
+  func prepareBackupExport(format: BackupExportFormat, backupPassword: String? = nil) -> URL? {
     saveEntries()
 
     do {
@@ -1798,13 +1353,11 @@ final class MoodViewModel: ObservableObject {
       lastBackupExportedAt = Date()
       UserDefaults.standard.set(lastBackupExportedAt, forKey: lastBackupExportedAtKey)
       if isReminderEnabled { scheduleDailyReminder() }
-      authErrorMessage = ""
       UINotificationFeedbackGenerator().notificationOccurred(.success)
       return url
     } catch {
-      authErrorMessage = userFacingMessage(
-        for: error,
-        fallback: "백업 파일을 만들지 못했어요. 다시 시도해주세요."
+      presentError(
+        userFacingMessage(for: error, fallback: "백업 파일을 만들지 못했어요. 다시 시도해주세요.")
       )
       return nil
     }
@@ -2153,157 +1706,6 @@ final class MoodViewModel: ObservableObject {
     savePendingDeleteIDs()
     if isReminderEnabled { scheduleDailyReminder() }
     syncWithICloud()
-  }
-
-  private func verifyPasscode(_ passcode: String) -> Bool {
-    guard let storedHash = Self.keychainString(account: Self.passcodeHashAccount),
-      let salt = Self.keychainString(account: Self.passcodeSaltAccount)
-    else { return false }
-    return hashPasscode(passcode, salt: salt) == storedHash
-  }
-
-  private func verifyRecoveryKey(_ recoveryKey: String) -> Bool {
-    guard let storedHash = Self.keychainString(account: Self.recoveryKeyHashAccount),
-      let salt = Self.keychainString(account: Self.recoveryKeySaltAccount)
-    else {
-      authErrorMessage = "저장된 복구키가 없어요. 기록 삭제 후 초기화가 필요해요."
-      return false
-    }
-    guard hashRecoveryKey(recoveryKey, salt: salt) == storedHash else {
-      authErrorMessage = "복구키가 맞지 않아요."
-      return false
-    }
-    return true
-  }
-
-  private static func migrateLegacyPasscodeIfNeeded(defaults: UserDefaults) {
-    guard keychainString(account: passcodeHashAccount) == nil,
-      let legacyHash = defaults.string(forKey: "moodie_passcode_hash"),
-      let legacySalt = defaults.string(forKey: "moodie_passcode_salt")
-    else { return }
-
-    if setKeychainString(legacyHash, account: passcodeHashAccount),
-      setKeychainString(legacySalt, account: passcodeSaltAccount)
-    {
-      defaults.removeObject(forKey: "moodie_passcode_hash")
-      defaults.removeObject(forKey: "moodie_passcode_salt")
-    }
-  }
-
-  private static func keychainString(account: String) -> String? {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: passcodeKeychainService,
-      kSecAttrAccount as String: account,
-      kSecReturnData as String: true,
-      kSecMatchLimit as String: kSecMatchLimitOne,
-    ]
-
-    var item: CFTypeRef?
-    let status = SecItemCopyMatching(query as CFDictionary, &item)
-    guard status == errSecSuccess, let data = item as? Data else { return nil }
-    return String(data: data, encoding: .utf8)
-  }
-
-  private static func setKeychainString(_ value: String, account: String) -> Bool {
-    let data = Data(value.utf8)
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: passcodeKeychainService,
-      kSecAttrAccount as String: account,
-    ]
-    let attributes: [String: Any] = [kSecValueData as String: data]
-
-    let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-    if updateStatus == errSecSuccess { return true }
-    guard updateStatus == errSecItemNotFound else { return false }
-
-    let addQuery: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: passcodeKeychainService,
-      kSecAttrAccount as String: account,
-      kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-      kSecValueData as String: data,
-    ]
-    return SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess
-  }
-
-  private static func deleteKeychainItem(account: String) {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: passcodeKeychainService,
-      kSecAttrAccount as String: account,
-    ]
-    SecItemDelete(query as CFDictionary)
-  }
-
-  private func hashPasscode(_ passcode: String, salt: String) -> String {
-    let data = Data("\(salt):\(passcode)".utf8)
-    let digest = SHA256.hash(data: data)
-    return digest.map { String(format: "%02x", $0) }.joined()
-  }
-
-  private func makeRecoveryKey() -> String {
-    let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
-    let characters = (0..<20).map { _ in String(alphabet[Int.random(in: 0..<alphabet.count)]) }
-    return stride(from: 0, to: characters.count, by: 4)
-      .map { characters[$0..<min($0 + 4, characters.count)].joined() }
-      .joined(separator: "-")
-  }
-
-  private func hashRecoveryKey(_ recoveryKey: String, salt: String) -> String {
-    hashPasscode(normalizedRecoveryKey(recoveryKey), salt: salt)
-  }
-
-  private func normalizedRecoveryKey(_ recoveryKey: String) -> String {
-    recoveryKey
-      .uppercased()
-      .filter { $0.isLetter || $0.isNumber }
-  }
-
-  private func authenticateWithBiometrics(completion: @escaping (Bool) -> Void) {
-    let context = LAContext()
-    var error: NSError?
-    let reason = "Moodie Sky 앱 암호를 빠르게 해제해요."
-
-    guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
-      authErrorMessage = "이 기기에서는 Face ID를 사용할 수 없어요."
-      completion(false)
-      return
-    }
-
-    context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) {
-      [weak self] success, error in
-      DispatchQueue.main.async {
-        if let error, !success {
-          self?.authErrorMessage = self?.biometricMessage(for: error) ?? "Face ID 인증을 완료하지 못했어요."
-        } else if success {
-          self?.authErrorMessage = ""
-        }
-        completion(success)
-      }
-    }
-  }
-
-  private func biometricMessage(for error: Error) -> String {
-    guard let laError = error as? LAError else {
-      return "Face ID 인증을 완료하지 못했어요."
-    }
-
-    switch laError.code {
-    case .userCancel, .systemCancel, .appCancel:
-      return ""
-    case .userFallback:
-      return "앱 암호로 인증해주세요."
-    case .biometryLockout:
-      return "Face ID가 잠시 잠겼어요. 기기 암호로 잠금을 해제한 뒤 다시 시도해주세요."
-    case .biometryNotAvailable:
-      return "이 기기에서는 Face ID를 사용할 수 없어요."
-    case .biometryNotEnrolled:
-      return "설정 앱에서 Face ID를 먼저 등록해주세요."
-    default:
-      return "Face ID 인증을 완료하지 못했어요."
-    }
   }
 
   // MARK: - 영구 저장
