@@ -428,12 +428,9 @@ struct ContentView: View {
 
   @ViewBuilder
   var rootTabView: some View {
-    if #available(iOS 18.0, *) {
-      tabs
-        .tabBarMinimizeBehavior(.onScrollDown)
-    } else {
-      tabs
-    }
+    tabs
+      .tabBarMinimizeBehavior(.onScrollDown)
+      .tint(vm.moodieTint)
   }
 
   var tabs: some View {
