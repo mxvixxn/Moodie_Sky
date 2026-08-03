@@ -123,7 +123,23 @@ docs/superpowers/              설계 문서 & 구현 계획
 
 ---
 
-## 8. 채팅에게 부탁하고 싶은 것
+## 8. 형제 앱 (헷갈리지 않기)
+
+같은 개발자의 다른 앱들이 있고, 특히 **Fitie와 섞이기 쉬우니** 주의해 주세요.
+
+| 앱 | 플랫폼 | 구분점 |
+|---|---|---|
+| **Fitie** | iOS 26 | HealthKit 습관 트래커. Swift 6, XcodeGen, 테스트 있음, 동기화 없음 |
+| **Vocabie** | iOS 26 | 단어 암기 앱. `@Observable` 사용 |
+| **Vocabie Android** | Flutter | Vocabie 안드로이드판, 별도 코드베이스 |
+| **Stewardie** | **macOS** | 메뉴바 정리 도구. AppKit + SwiftPM |
+
+Moodie Sky는 이 중 **유일하게 CloudKit 동기화를 쓰고**, 로직이 `MoodViewModel` 하나에 집중된 `ObservableObject` MVVM입니다.
+Liquid Glass 설계 원칙("유리는 조작 층에만, 커스텀 유리 금지")은 이 프로젝트에서 정해져 Vocabie로 승계됐어요.
+
+---
+
+## 9. 채팅에게 부탁하고 싶은 것
 
 이 앱에 대해 이야기할 때:
 
